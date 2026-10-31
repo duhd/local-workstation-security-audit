@@ -31,6 +31,7 @@ test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" && echo
 **Option 1b — Windows PowerShell:**
 
 ```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills" | Out-Null
 git clone https://github.com/duhd/local-workstation-security-audit `
   "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
 Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKILL.md"
@@ -40,6 +41,8 @@ Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKIL
 
 **Option 2 — no skill loader:** open `PROMPT.md` and paste the whole thing into your agent.
 
+Requirement to run the audit: the agent must have a shell tool (Bash / PowerShell / terminal). Without a shell it must stop and ask you to paste command output — it must **not** describe the checklist as if it had been checked.
+
 **Update to a newer version** (later, when the skill changes):
 
 ```bash
@@ -48,9 +51,7 @@ git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only
 
 On Windows PowerShell: `git -C "$env:USERPROFILE\.claude\skills\local-workstation-security-audit" pull --ff-only`.
 
-**The only requirement:** the agent must have a shell tool (Bash / PowerShell / terminal). Without a shell it must stop and ask you to paste command output — it must **not** describe the checklist as if it had been checked.
-
-> **For an agent reading this:** next step is `SKILL.md` — run Phase 1 → 9 (posture), then Phase 10 → 17 (attacker-first). Read-only by default. Never print secrets. If you only have time for one pass, follow the priority order in `SKILL.md` (**17 → 10 → 12 → 11 → 14 → 13 → 15 → 16**). Ask the user to choose an option per finding before changing anything on the machine.
+> **For an agent reading this:** next step is `SKILL.md` — run Phase 1 → 9 (posture), then Phase 10 → 17 (attacker-first). A complete pass is **all 17 phases**; never run only half. With ~30 minutes, do **Phase 1 (patch/disk encryption), 3 (network exposure), 5 (browser)** first, then **17 → 10 → 12** — that set surfaces the heaviest findings on a dev machine. Read-only by default. Never print secrets. Ask the user to choose an option per finding before changing anything on the machine.
 
 ---
 

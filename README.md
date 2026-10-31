@@ -31,6 +31,7 @@ test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" && echo
 **Cách 1b — Windows PowerShell:**
 
 ```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills" | Out-Null
 git clone https://github.com/duhd/local-workstation-security-audit `
   "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
 Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKILL.md"
@@ -40,6 +41,8 @@ Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKIL
 
 **Cách 2 — không có skill loader:** mở `PROMPT.md`, dán toàn bộ nội dung vào agent.
 
+Điều kiện để chạy audit: agent phải có tool shell (Bash / PowerShell / terminal). Không có shell thì nó phải dừng và yêu cầu bạn dán output — **không** được mô tả lại checklist như thể đã kiểm.
+
 **Cập nhật lên bản mới** (sau này, khi skill thay đổi):
 
 ```bash
@@ -48,9 +51,7 @@ git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only
 
 Ở Windows PowerShell: `git -C "$env:USERPROFILE\.claude\skills\local-workstation-security-audit" pull --ff-only`.
 
-**Điều kiện duy nhất:** agent phải có tool shell (Bash / PowerShell / terminal). Không có shell thì nó phải dừng và yêu cầu bạn dán output — **không** được mô tả lại checklist như thể đã kiểm.
-
-> **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md`, chạy Phase 1 → 9 (posture) rồi Phase 10 → 17 (attacker-first). Read-only mặc định. Không in secret. Nếu chỉ có thời gian cho một lượt, đi theo thứ tự ưu tiên trong `SKILL.md` (**17 → 10 → 12 → 11 → 14 → 13 → 15 → 16**). Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
+> **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md`, chạy Phase 1 → 9 (posture) rồi Phase 10 → 17 (attacker-first). Một lượt đầy đủ là **cả 17 phase**; không có chuyện chỉ chạy một nửa. Nếu chỉ có ~30 phút thì chạy trước **Phase 1 (patch/mã hoá ổ), 3 (exposure mạng), 5 (browser)**, rồi **17 → 10 → 12** — đó là nhóm cho finding nặng nhất trên máy dev. Read-only mặc định. Không in secret. Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
 
 ---
 
