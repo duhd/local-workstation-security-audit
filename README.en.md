@@ -183,12 +183,12 @@ A report at `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md`:
 
 The report contains IPs, hostnames and internal paths ⇒ **treat it as internal**, never commit it to a public repo.
 
-### Post-Audit Interactive Triage Prompt
+### Post-Audit Interactive Triage via Ask Question Tool
 
-Once the audit is completed and the report is generated, **do not manually guess fixes or let the agent blindly mutate your system**. Paste this prompt to have the agent interview you finding-by-finding:
+Once the audit is completed and the report is generated, **do not manually guess fixes or let the agent blindly mutate your system**. Paste this prompt to have the agent trigger the interactive Ask Question tool:
 
 ```markdown
-"Based on the completed audit report, act as a senior system security engineer and walk me through each finding one-by-one (from P0, P1 down to P3). For each finding, provide:
+"Based on the completed audit report, act as a senior system security engineer and use the Ask Question tool (or interactive selection UI) to walk me through each finding one-by-one (from P0, P1 down to P3). For each finding, provide clear options:
 1. An Accept option (explaining the accepted risk and operational consequences).
 2. Concrete Fix options (minimal vs. complete, including exact commands to run and any breaking side effects).
 Only execute the chosen remediation after I explicitly confirm my choice."

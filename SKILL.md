@@ -327,7 +327,15 @@ Không gán mức cho mục **chưa kiểm được**. Nếu chưa chứng minh 
 
 ## Phase 8 — Remediation (theo quyết định của user)
 
-Với **từng** finding, hỏi user: Accept / Fix tối thiểu / Fix + rotate / Fix toàn bộ. Mỗi phương án nêu: lệnh sẽ chạy, hệ quả, khả năng phá chức năng, rollback.
+Với **từng** finding, Agent BẮT BUỘC phải dùng cơ chế **Ask User Question tool** (`ask` / `AskUserQuestion`) để tạo giao diện tương tác trực tiếp cho người dùng lựa chọn (không được dump văn bản rồi tự suy đoán).
+
+Quy cách gọi `ask`:
+- **Batch hoặc tuần tự từng finding**: 1 câu hỏi tương ứng 1 finding (từ P0, P1 đến P3).
+- **Các options chuẩn bắt buộc cung cấp**:
+  1. `Accept`: Chấp nhận rủi ro (kèm phân tích hệ quả).
+  2. `Fix tối thiểu`: Sửa bề mặt trực tiếp, ít rủi ro phá vỡ chức năng.
+  3. `Fix triệt để`: Đóng triệt để rủi ro (kèm cảnh báo tác động phá chức năng nếu có).
+- Mỗi option phải có `description` nêu rõ: lệnh sẽ chạy, hệ quả, rollback.
 
 ### Thứ tự bắt buộc khi nhiều lớp
 
@@ -434,15 +442,15 @@ Cấu trúc báo cáo bắt buộc:
    - Sau khi kết xuất báo cáo sơ bộ, Main Agent PHẢI chủ động rà soát lại toàn bộ danh sách tại mục *Giới hạn coverage*.
    - Đối với các mục bị chặn bởi `Access denied` (như `vssadmin list shadows`, `auditpol`, `secedit`, `Get-AppLockerPolicy`, quyền private key CA, kiểm tra sâu BitLocker/TPM), Main Agent **bắt buộc phải chủ động hỏi user để xin phép chạy 1 đợt script elevated duy nhất qua UAC / sudo**.
    - Sau khi hoàn thành đợt elevated, Main Agent cập nhật lại báo cáo chính, đưa các mục từ trạng thái "chưa kiểm được" sang số liệu đo lường thực tế trước khi kết thúc phiên.
-9. **Hướng dẫn tiếp theo (Interactive Remediation Triage)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng có thể copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding và CVE.
+9. **Hướng dẫn tiếp theo (Interactive Remediation Triage qua Ask Question)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng có thể copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding bằng công cụ **Ask Question / AskUserQuestion**.
 Prompt mẫu bắt buộc phải có ở cuối report:
 ```markdown
 ## Hướng dẫn tiếp theo: Chạy Interactive Remediation Triage
 
-> "Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và lần lượt hỏi tôi về từng finding (từ P0, P1 đến P3). Với mỗi finding, hãy cung cấp rõ:
+> "Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và sử dụng công cụ Ask Question (hoặc cơ chế hỏi lựa chọn tương tác) để lần lượt hỏi tôi về từng finding (từ P0, P1 đến P3). Với mỗi finding, hãy cung cấp rõ các options:
 > 1. Phương án Accept (chấp nhận rủi ro, phân tích hệ quả).
 > 2. Các phương án Fix cụ thể (tối thiểu, triệt để, kèm lệnh sẽ chạy, kiểm tra tác động phá chức năng nếu có).
-> Chỉ thực thi phương án khi tôi đã đưa ra quyết định lựa chọn."
+> Chỉ thực thi phương án khi tôi đã bấm chọn quyết định."
 ```
 
 **Phân loại dữ liệu report**: report chứa IP tailnet/LAN, hostname, tên gateway, endpoint nội bộ, đường dẫn credential — coi là **tài liệu nội bộ**. Không push sang remote công khai; nếu repo có nhiều remote, chỉ push nhánh lên remote nội bộ.
