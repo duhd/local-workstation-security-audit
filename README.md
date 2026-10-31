@@ -17,35 +17,71 @@ Repo này là checklist thực thi cho bước "kiểm tra endpoint" đó — ch
 
 ## Cài trong 60 giây
 
-**Cách 1 — harness có skill loader** (macOS / Linux / Git Bash):
+Tùy vào công cụ bạn đang dùng, chọn cách cài tương ứng:
 
+### 1. Claude Code
+
+**macOS / Linux / Git Bash:**
 ```bash
 mkdir -p "$HOME/.claude/skills" "$HOME/.claude/commands"
 git clone --depth 1 https://github.com/duhd/local-workstation-security-audit \
   "$HOME/.claude/skills/local-workstation-security-audit"
-# slash command chỉ xuất hiện khi file nằm trong ~/.claude/commands/
-cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" \
-   "$HOME/.claude/commands/"
-# kiểm tra cả hai rồi gọi:
-test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" \
-  && ls "$HOME/.claude/commands/local-pc-security-audit.md" && echo OK
+cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" "$HOME/.claude/commands/"
 /local-pc-security-audit
 ```
 
-**Cách 1b — Windows PowerShell:**
-
+**Windows PowerShell:**
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills","$env:USERPROFILE\.claude\commands" | Out-Null
-git clone https://github.com/duhd/local-workstation-security-audit `
-  "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
-Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\commands\local-pc-security-audit.md" `
-  "$env:USERPROFILE\.claude\commands\"
-Test-Path "$env:USERPROFILE\.claude\commands\local-pc-security-audit.md"
+git clone https://github.com/duhd/local-workstation-security-audit "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
+Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\commands\local-pc-security-audit.md" "$env:USERPROFILE\.claude\commands\"
 ```
 
-> Thay `.claude/skills` bằng thư mục skill của harness bạn dùng — layout này chỉ là ví dụ. Nếu harness không có khái niệm thư mục skill, dùng Cách 2.
+### 2. Oh My Pi (omp) / Pi CLI
 
-**Cách 2 — không có skill loader:** mở `PROMPT.md`, dán toàn bộ nội dung vào agent.
+`omp` và `pi` tự động nhận diện skill đặt trong thư mục agent home:
+```bash
+# Windows PowerShell:
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.omp\agent\skills" | Out-Null
+git clone https://github.com/duhd/local-workstation-security-audit "$env:USERPROFILE\.omp\agent\skills\local-workstation-security-audit"
+
+# macOS / Linux:
+mkdir -p "$HOME/.omp/agent/skills"
+git clone https://github.com/duhd/local-workstation-security-audit "$HOME/.omp/agent/skills/local-workstation-security-audit"
+```
+Khởi động lại session hoặc gõ `/skill:local-workstation-security-audit`.
+
+### 3. OpenAI Codex CLI
+
+Codex hỗ trợ load hướng dẫn agent qua prompt hoặc plugin:
+```bash
+# Cách nhanh nhất: Clone về thư mục tài liệu hoặc nạp qua system instructions
+git clone --depth 1 https://github.com/duhd/local-workstation-security-audit "$HOME/.codex/skills/local-workstation-security-audit"
+```
+Hoặc mở phiên Codex và chỉ định:
+```bash
+codex "Thực hiện audit bảo mật máy theo hướng dẫn trong ~/.codex/skills/local-workstation-security-audit/SKILL.md"
+```
+
+### 4. Cursor / Windsurf / VS Code (Agent Mode)
+
+Đặt rule vào project hoặc thư mục làm việc hiện tại:
+```bash
+mkdir -p .cursor/rules   # Với Cursor
+# Copy nội dung SKILL.md hoặc PROMPT.md vào:
+cp "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" .cursor/rules/security-audit.mdc
+```
+Trong thanh chat của Cursor/Windsurf (Agent Mode): gõ `@security-audit.mdc chạy audit bảo mật cho máy này`.
+
+### 5. Claude Desktop (GUI)
+
+Claude Desktop không có shell mặc định. Hai cách dùng:
+1. **Tự động (Khuyên dùng)**: Thêm 1 Terminal MCP Server (như `@wonderwhy-er/desktop-commander` hoặc MCP shell bất kỳ) vào `%APPDATA%\Claude\claude_desktop_config.json`. Sau đó dán `PROMPT.md` vào chat để Claude tự chạy lệnh.
+2. **Bán tự động (Human-in-the-loop)**: Dán trực tiếp `PROMPT.md` vào chat. Claude sẽ soạn từng block lệnh cho bạn copy vào PowerShell/Terminal chạy, rồi bạn dán kết quả ngược lại để Claude phân tích.
+
+### 6. Mọi công cụ AI Agent khác (Generic)
+
+Mở file [`PROMPT.md`](PROMPT.md), copy toàn bộ nội dung và dán vào cửa sổ chat của bất kỳ Agent nào có quyền thực thi shell.
 
 Điều kiện để chạy audit: agent phải có tool shell (Bash / PowerShell / terminal). Không có shell thì nó phải dừng và yêu cầu bạn dán output — **không** được mô tả lại checklist như thể đã kiểm.
 

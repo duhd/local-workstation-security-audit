@@ -17,35 +17,70 @@ This repo is an executable checklist for that endpoint check — on Windows, mac
 
 ## Install in 60 seconds
 
-**Option 1 — harness with a skill loader** (macOS / Linux / Git Bash):
+Choose the setup instructions matching your tool of choice:
 
+### 1. Claude Code
+
+**macOS / Linux / Git Bash:**
 ```bash
 mkdir -p "$HOME/.claude/skills" "$HOME/.claude/commands"
 git clone --depth 1 https://github.com/duhd/local-workstation-security-audit \
   "$HOME/.claude/skills/local-workstation-security-audit"
-# the slash command only appears when the file lives in ~/.claude/commands/
-cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" \
-   "$HOME/.claude/commands/"
-# verify both, then run:
-test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" \
-  && ls "$HOME/.claude/commands/local-pc-security-audit.md" && echo OK
+cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" "$HOME/.claude/commands/"
 /local-pc-security-audit
 ```
 
-**Option 1b — Windows PowerShell:**
-
+**Windows PowerShell:**
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills","$env:USERPROFILE\.claude\commands" | Out-Null
-git clone https://github.com/duhd/local-workstation-security-audit `
-  "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
-Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\commands\local-pc-security-audit.md" `
-  "$env:USERPROFILE\.claude\commands\"
-Test-Path "$env:USERPROFILE\.claude\commands\local-pc-security-audit.md"
+git clone https://github.com/duhd/local-workstation-security-audit "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
+Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\commands\local-pc-security-audit.md" "$env:USERPROFILE\.claude\commands\"
 ```
 
-> Replace `.claude/skills` with your harness's skill directory — that layout is only an example. If your harness has no concept of a skill directory, use Option 2.
+### 2. Oh My Pi (omp) / Pi CLI
 
-**Option 2 — no skill loader:** open `PROMPT.md` and paste the whole thing into your agent.
+`omp` and `pi` auto-discover skills placed under the agent home directory:
+```bash
+# Windows PowerShell:
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.omp\agent\skills" | Out-Null
+git clone https://github.com/duhd/local-workstation-security-audit "$env:USERPROFILE\.omp\agent\skills\local-workstation-security-audit"
+
+# macOS / Linux:
+mkdir -p "$HOME/.omp/agent/skills"
+git clone https://github.com/duhd/local-workstation-security-audit "$HOME/.omp/agent/skills/local-workstation-security-audit"
+```
+Restart your session or run `/skill:local-workstation-security-audit`.
+
+### 3. OpenAI Codex CLI
+
+Clone to your local instructions or Codex skills directory:
+```bash
+git clone --depth 1 https://github.com/duhd/local-workstation-security-audit "$HOME/.codex/skills/local-workstation-security-audit"
+```
+Then run in Codex:
+```bash
+codex "Perform a local security audit following instructions in ~/.codex/skills/local-workstation-security-audit/SKILL.md"
+```
+
+### 4. Cursor / Windsurf / VS Code (Agent Mode)
+
+Add the rule to your project:
+```bash
+mkdir -p .cursor/rules   # For Cursor
+cp "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" .cursor/rules/security-audit.mdc
+```
+In Cursor/Windsurf Agent chat, type `@security-audit.mdc run a local security audit for this workstation`.
+
+### 5. Claude Desktop (GUI)
+
+Claude Desktop lacks a built-in shell out of the box. Two ways to run:
+1. **Automated (Recommended)**: Add a Terminal MCP Server (such as `@wonderwhy-er/desktop-commander` or any shell MCP) to your `claude_desktop_config.json`. Then paste [`PROMPT.md`](PROMPT.md) into the chat.
+2. **Assisted (Human-in-the-loop)**: Paste [`PROMPT.md`](PROMPT.md) directly into chat. Claude will craft the exact PowerShell/Bash commands for each Phase for you to run and paste back.
+
+### 6. Any other AI Agent harness (Generic)
+
+Open [`PROMPT.md`](PROMPT.md), copy everything, and paste it into any agent with shell execution capabilities.
+
 
 Requirement to run the audit: the agent must have a shell tool (Bash / PowerShell / terminal). Without a shell it must stop and ask you to paste command output — it must **not** describe the checklist as if it had been checked.
 
