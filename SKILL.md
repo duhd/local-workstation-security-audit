@@ -64,6 +64,21 @@ reg query <key> /s
 
 Không kết luận "đã vá đầy đủ" từ danh sách KB/`Get-HotFix` (bỏ sót cumulative/SSU) — dùng update searcher / `softwareupdate` / package manager.
 
+### Patch gap của ứng dụng & browser (đừng bỏ)
+
+OS patch ≠ ứng dụng patch. Máy có thể vá OS đầy đủ nhưng browser/remote-access host lệch nhiều major version.
+
+| Việc | Windows | macOS | Linux |
+|---|---|---|---|
+| Gói có bản mới | `winget upgrade --include-unknown` | `brew outdated --greedy` | `apt list --upgradable` / `dnf check-update` / `flatpak remote-ls --updates` |
+| Version browser đang cài | `(Get-Item "$env:ProgramFiles\Google\Chrome\Application\chrome.exe").VersionInfo.ProductVersion`; registry Uninstall keys | `defaults read "/Applications/Google Chrome.app/Contents/Info" CFBundleShortVersionString`; `mdls -name kMDItemVersion` | `google-chrome --version`; `chromium --version`; `firefox --version` |
+| Bản mới nhất | Chrome: `https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1`; Edge: `winget show Microsoft.Edge` | Chrome như trên (platform=mac); Safari theo OS | Chrome: platform=linux; `apt-cache policy <pkg>` |
+| Remote-access host | `winget list "*Remote Desktop*"`, `Get-Service chromoting`, RustDesk/AnyDesk | `ls /Applications | grep -iE 'anydesk|rustdesk|teamviewer'` | `systemctl status anydesk rustdesk --no-pager` |
+
+Cách đọc: so **installed vs latest stable**. Patch release của browser (ví dụ `X.Y.Z.41` → `X.Y.Z.47`, cùng major) gần như luôn chứa bản vá bảo mật ⇒ lệch ≥1 patch = cần update. Remote-access host lệch **major** version trong khi service đang chạy là finding mức High nếu ổ chưa mã hoá.
+
+Giới hạn phải nêu rõ trong report: **patch gap ≠ CVE mapping**. Muốn khẳng định "dính CVE-X" phải đối chiếu NVD/MSRC + release notes; nếu chưa làm thì ghi "lệch bản mới nhất, mức khai thác chưa xác định".
+
 ## Phase 2 — Bí mật nằm trên đĩa
 
 | Nguồn | Windows | macOS / Linux |
