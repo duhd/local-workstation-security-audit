@@ -348,16 +348,18 @@ Mỗi thay đổi phải được đo lại **bằng đúng phép đo đã dùng
 
 ## Phase 9 — Report
 
-Ghi `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md` (hoặc đường dẫn user chọn). Cấu trúc:
+Ghi `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md` (hoặc đường dẫn user chọn). **Bắt buộc full ngay từ đầu**: Report audit và Báo cáo phân tích CVE lỗ hổng phần mềm/trình duyệt/OS PHẢI được xuất bản ĐẦY ĐỦ NGAY LẬP TỨC trong cùng một lần chạy, không được tách rời hay để chờ user yêu cầu mới làm.
+
+Cấu trúc báo cáo bắt buộc:
 
 1. **Metadata**: host, OS/build, user, quyền, ngày, phạm vi.
 2. **Kết luận**: bảng xếp theo blast radius (P0→P3), cột *Tác động quan sát được* — không dùng "có thể" khi đã đo được.
-3. **Chi tiết từng finding**: Evidence (lệnh + output) → Đánh giá → Fix → Verify → Rollback.
-4. **Trạng thái khắc phục**: đã áp dụng (kèm verify) / đã thử và rollback (kèm lý do) / còn chờ (kèm điều kiện).
-5. **Kết luận đã bị bác bỏ**: giữ lại để người sau không lặp lại.
-6. **Giới hạn coverage**: chưa kiểm gì và vì sao.
-7. **Hướng dẫn tiếp theo (Interactive Remediation Triage)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng có thể copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding.
-
+3. **Báo cáo Lỗ hổng & CVE (OS, Browser, Remote-Access & High-Risk Apps)**: Bảng định danh CVE chi tiết cho các phần mềm rủi ro cao (Chrome, Edge, CRD Host, Git, 7-Zip, OS cumulative patch...), chỉ số CVSS, EPSS (xác suất khai thác), CISA KEV (cờ đang bị tấn công), và phân loại fix.state / unpatched.
+4. **Chi tiết từng finding posture & attacker-first**: Evidence (lệnh + output) → Đánh giá → Fix → Verify → Rollback.
+5. **Trạng thái khắc phục**: đã áp dụng (kèm verify) / đã thử và rollback (kèm lý do) / còn chờ (kèm điều kiện).
+6. **Kết luận đã bị bác bỏ**: giữ lại để người sau không lặp lại.
+7. **Giới hạn coverage**: chưa kiểm gì và vì sao.
+8. **Hướng dẫn tiếp theo (Interactive Remediation Triage)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng có thể copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding và CVE.
 Prompt mẫu bắt buộc phải có ở cuối report:
 ```markdown
 ## Hướng dẫn tiếp theo: Chạy Interactive Remediation Triage
