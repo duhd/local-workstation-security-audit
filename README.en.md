@@ -21,7 +21,7 @@ This repo is an executable checklist for that endpoint check — on Windows, mac
 
 ```bash
 mkdir -p "$HOME/.claude/skills" "$HOME/.claude/commands"
-git clone https://github.com/duhd/local-workstation-security-audit \
+git clone --depth 1 https://github.com/duhd/local-workstation-security-audit \
   "$HOME/.claude/skills/local-workstation-security-audit"
 # the slash command only appears when the file lives in ~/.claude/commands/
 cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" \
@@ -53,9 +53,20 @@ Requirement to run the audit: the agent must have a shell tool (Bash / PowerShel
 
 ```bash
 git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only
+# the command file is a COPY, not a symlink — re-copy it after every pull
+cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" \
+   "$HOME/.claude/commands/"
 ```
 
-On Windows PowerShell: `git -C "$env:USERPROFILE\.claude\skills\local-workstation-security-audit" pull --ff-only`.
+On Windows PowerShell:
+
+```powershell
+git -C "$env:USERPROFILE\.claude\skills\local-workstation-security-audit" pull --ff-only
+Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\commands\local-pc-security-audit.md" `
+  "$env:USERPROFILE\.claude\commands\" -Force
+```
+
+After copying, restart the harness (or reload skills) so the command appears.
 
 > **For an agent reading this:** next step is `SKILL.md` — run Phase 1 → 9 (posture), then Phase 10 → 17 (attacker-first). A complete pass is **all 17 phases**; never run only half. With ~30 minutes, do **Phase 1 (patch/disk encryption), 3 (network exposure), 5 (browser)** first, then **17 → 10 → 12** — that set surfaces the heaviest findings on a dev machine. Read-only by default. Never print secrets. Ask the user to choose an option per finding before changing anything on the machine.
 
@@ -76,7 +87,7 @@ On Windows PowerShell: `git -C "$env:USERPROFILE\.claude\skills\local-workstatio
 
 ## What it checks
 
-**Phase 1–9 — posture.** OS patch level (via update searcher, not a KB list) · disk encryption · TPM/Secure Boot/SIP · firewall + listeners + overlay-network ACL · credentials at rest · persistence · browser profiles, extensions, remote-access hosts · repos and git history · application patch gap · severity · remediation · report.
+**Phase 1–9 — posture.** OS patch level (via update searcher, not a KB list) · disk encryption · TPM/Secure Boot/SIP · firewall + listeners + overlay-network ACL · credentials at rest · persistence · browser profiles, extensions, remote-access hosts · repos and git history · **application patch gap + CVE mapping** (NVD/MSRC/EPSS, high-risk subset only: browser, remote-access host, OS component, VPN, file parsers) · severity · remediation · report.
 
 **Phase 10–17 — attacker-first.** The part usually missed, because it appears in no CIS checklist. Four questions it answers:
 

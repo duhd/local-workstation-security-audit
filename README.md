@@ -21,7 +21,7 @@ Repo này là checklist thực thi cho bước "kiểm tra endpoint" đó — ch
 
 ```bash
 mkdir -p "$HOME/.claude/skills" "$HOME/.claude/commands"
-git clone https://github.com/duhd/local-workstation-security-audit \
+git clone --depth 1 https://github.com/duhd/local-workstation-security-audit \
   "$HOME/.claude/skills/local-workstation-security-audit"
 # slash command chỉ xuất hiện khi file nằm trong ~/.claude/commands/
 cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" \
@@ -53,9 +53,20 @@ Test-Path "$env:USERPROFILE\.claude\commands\local-pc-security-audit.md"
 
 ```bash
 git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only
+# command là BẢN COPY, không phải symlink — phải copy lại sau mỗi lần pull
+cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" \
+   "$HOME/.claude/commands/"
 ```
 
-Ở Windows PowerShell: `git -C "$env:USERPROFILE\.claude\skills\local-workstation-security-audit" pull --ff-only`.
+Ở Windows PowerShell:
+
+```powershell
+git -C "$env:USERPROFILE\.claude\skills\local-workstation-security-audit" pull --ff-only
+Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\commands\local-pc-security-audit.md" `
+  "$env:USERPROFILE\.claude\commands\" -Force
+```
+
+Sau khi copy, khởi động lại harness (hoặc reload skills) để lệnh xuất hiện.
 
 > **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md`, chạy Phase 1 → 9 (posture) rồi Phase 10 → 17 (attacker-first). Một lượt đầy đủ là **cả 17 phase**; không có chuyện chỉ chạy một nửa. Nếu chỉ có ~30 phút thì chạy trước **Phase 1 (patch/mã hoá ổ), 3 (exposure mạng), 5 (browser)**, rồi **17 → 10 → 12** — đó là nhóm cho finding nặng nhất trên máy dev. Read-only mặc định. Không in secret. Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
 
@@ -76,7 +87,7 @@ git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only
 
 ## Nó kiểm cái gì
 
-**Phase 1–9 — posture.** Patch OS (bằng update searcher, không bằng danh sách KB) · mã hoá ổ · TPM/Secure Boot/SIP · firewall + listener + ACL mạng overlay · credential at-rest · persistence · browser profile + extension + remote-access host · repo & lịch sử git · patch gap ứng dụng · severity · remediation · report.
+**Phase 1–9 — posture.** Patch OS (bằng update searcher, không bằng danh sách KB) · mã hoá ổ · TPM/Secure Boot/SIP · firewall + listener + ACL mạng overlay · credential at-rest · persistence · browser profile + extension + remote-access host · repo & lịch sử git · **patch gap ứng dụng + CVE mapping** (NVD/MSRC, chỉ nhóm rủi ro cao: browser, remote-access host, OS component, VPN, trình đọc file) · severity · remediation · report.
 
 **Phase 10–17 — attacker-first.** Phần thường bị bỏ sót, vì nó không nằm trong checklist CIS nào. Bốn câu hỏi nó trả lời:
 
