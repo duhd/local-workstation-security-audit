@@ -17,7 +17,15 @@ Repo này là checklist thực thi cho bước "kiểm tra endpoint" đó — ch
 
 ## Cài trong 60 giây
 
-Tùy vào công cụ bạn đang dùng, chọn cách cài tương ứng:
+**Cách nhanh nhất (khuyên dùng — tự động nhận diện mọi CLI/Agent):**
+```bash
+npx skills add duhd/local-workstation-security-audit -g -y
+```
+*Lệnh trên tự động cài đặt skill vào thư mục chuẩn `~/.agents/skills/` và tạo symlink cho Claude Code, Codex, Amp, Antigravity, Cline, OpenCode, v.v.*
+
+---
+
+Hoặc chọn cách cài thủ công theo từng công cụ dưới đây:
 
 ### 1. Claude Code
 

@@ -17,7 +17,15 @@ This repo is an executable checklist for that endpoint check — on Windows, mac
 
 ## Install in 60 seconds
 
-Choose the setup instructions matching your tool of choice:
+**Fastest way (Recommended — auto-detects all agents/CLIs):**
+```bash
+npx skills add duhd/local-workstation-security-audit -g -y
+```
+*The command above automatically installs the skill into the universal `~/.agents/skills/` directory and symlinks it for Claude Code, Codex, Amp, Antigravity, Cline, OpenCode, +17 more.*
+
+---
+
+Or choose manual instructions matching your tool of choice:
 
 ### 1. Claude Code
 
