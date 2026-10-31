@@ -32,7 +32,7 @@ Lệnh theo OS: `manage-bde -status` / `fdesetup status` / `lsblk`+`cryptsetup s
 
 **Bước 4 — Persistence.** Autorun/launchd/systemd/cron/task/service: resolve target + chữ ký, kiểm quyền thư mục chứa (path user-writable + chạy quyền cao = điểm persistence thật), phân biệt binary với COM handler.
 
-**Bước 5 — Browser.** Profile + kích thước `Login Data`/`Cookies` + extension (map tên thật), remote-desktop host, PWA tự chạy khi login. Không giải mã credential browser.
+**Bước 5 — Browser & Shadow Automation Engine.** Profile + kích thước `Login Data`/`Cookies` + extension (map tên thật), remote-desktop host, PWA tự chạy khi login. **Quét Shadow Chromium cache của Agent/Playwright/Puppeteer** (`ms-playwright` / `.cache/puppeteer`), kiểm tra cờ `--no-sandbox`, và rà soát quyền Accessibility (trên macOS TCC / Windows UI Automation) của Terminal/IDE để chặn nguy cơ GPU/Sandbox escape leo thang điều khiển OS. Không giải mã credential browser.
 
 **Bước 6 — Repo.** Tìm mọi `.git`, quét config cấp repo + `.gitmodules` (chỉ `grep -l`, không `-o/-h`). Credential trong file **tracked** → xác định `HEAD:<file>`, commit nào đưa vào (`git log -S`), đã push nhánh nào (`git branch -r --contains`) rồi mới kết luận mức.
 

@@ -258,6 +258,10 @@ Mỗi entry: **resolve target** (path thật + args), **chữ ký/hash**, **quy�
 - Liệt kê **profile** + kích thước `Login Data`/`Cookies` + extension (map `__MSG_*` sang tên thật từ `manifest.json`).
 - Đường dẫn: Win `%LOCALAPPDATA%\<Vendor>\<Browser>\User Data`; macOS `~/Library/Application Support/<Vendor>/<Browser>`; Linux `~/.config/<vendor>/<browser>`.
 - Remote-access host: Chrome Remote Desktop (`chromoting`), RustDesk, AnyDesk — kiểm service + extension.
+- **Shadow Automation Browser & Engine Cache (Playwright/Puppeteer/Agent-browser)**:
+  - Quét cache Chromium mà Agent tải riêng: Windows `%LOCALAPPDATA%\ms-playwright`, `%USERPROFILE%\.cache\puppeteer`; macOS `~/Library/Caches/ms-playwright`; Linux `~/.cache/ms-playwright`.
+  - So sánh version build Chromium ẩn này với bản stable Chrome chính thức (nếu lệch nhiều tháng ⇒ **nguy cơ lỗ hổng V8/GPU Sandbox Escape**).
+  - Kiểm tra cờ khởi chạy browser của Agent: có bị chèn `--no-sandbox` hoặc `--disable-setuid-sandbox` không.
 - PWA tự chạy khi login: đọc shortcut → `--app-id=<id>` → tìm `Web Applications/_crx_<id>/` để biết app nào.
 - Không cố giải mã `Login Data`; kết luận theo *khả năng truy cập file*, không theo nội dung.
 
@@ -537,6 +541,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 | Bỏ qua phê duyệt | `approvalMode`/`permissions` (yolo/danger-full-access), allow-list cho bash/eval/browser |
 | Đọc secret từ transcript | Session DB, `blobs/`, `custom-session-files/`, fact-board — nội dung user dán vào |
 | Daemon loopback không auth | CDP (`DevToolsActivePort`), orchestrator/agent daemon cục bộ, MCP HTTP server — bất kỳ process local nào cũng gọi được |
+| **Sandbox Escape qua Automation Browser** | Agent dùng Playwright/Puppeteer với Chromium cache lỗi thời + cờ `--no-sandbox` hoặc process IDE/Terminal được cấp quyền Accessibility (macOS TCC / Windows UI Automation) ⇒ GPU/Renderer escape dẫn tới gõ phím giả lập (mở Spotlight/Run, spawn reverse shell) |
 | Tự chạy khi login | Agent daemon/PWA autostart |
 
 **Cách dùng mục này trong report**: ghi rõ mục nào **đã chạy**, mục nào **chưa chạy**. Một danh sách scope không thay thế phép đo — nếu chưa đo thì ghi "chưa kiểm", không ghi "không có".
