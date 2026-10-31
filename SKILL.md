@@ -409,8 +409,12 @@ Cấu trúc báo cáo bắt buộc:
 4. **Chi tiết từng finding posture & attacker-first**: Evidence (lệnh + output) → Đánh giá → Fix → Verify → Rollback.
 5. **Trạng thái khắc phục**: đã áp dụng (kèm verify) / đã thử và rollback (kèm lý do) / còn chờ (kèm điều kiện).
 6. **Kết luận đã bị bác bỏ**: giữ lại để người sau không lặp lại.
-7. **Giới hạn coverage**: chưa kiểm gì và vì sao.
-8. **Hướng dẫn tiếp theo (Interactive Remediation Triage)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng có thể copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding và CVE.
+7. **Giới hạn coverage**: Liệt kê chi tiết các mục chưa kiểm được và lý do (chủ yếu do thiếu quyền Administrator / UAC).
+8. **Quy trình Main Agent thực thi lại các mục cần Elevated (Bắt buộc)**:
+   - Sau khi kết xuất báo cáo sơ bộ, Main Agent PHẢI chủ động rà soát lại toàn bộ danh sách tại mục *Giới hạn coverage*.
+   - Đối với các mục bị chặn bởi `Access denied` (như `vssadmin list shadows`, `auditpol`, `secedit`, `Get-AppLockerPolicy`, quyền private key CA, kiểm tra sâu BitLocker/TPM), Main Agent **bắt buộc phải chủ động hỏi user để xin phép chạy 1 đợt script elevated duy nhất qua UAC / sudo**.
+   - Sau khi hoàn thành đợt elevated, Main Agent cập nhật lại báo cáo chính, đưa các mục từ trạng thái "chưa kiểm được" sang số liệu đo lường thực tế trước khi kết thúc phiên.
+9. **Hướng dẫn tiếp theo (Interactive Remediation Triage)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng có thể copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding và CVE.
 Prompt mẫu bắt buộc phải có ở cuối report:
 ```markdown
 ## Hướng dẫn tiếp theo: Chạy Interactive Remediation Triage

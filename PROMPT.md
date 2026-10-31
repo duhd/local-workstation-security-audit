@@ -44,7 +44,8 @@ Lệnh theo OS: `manage-bde -status` / `fdesetup status` / `lsblk`+`cryptsetup s
 3. **Báo cáo Lỗ hổng & CVE (bắt buộc)**: Bảng định danh CVE chi tiết cho OS, trình duyệt (Chrome/Edge), Remote-Access host (CRD, AnyDesk), phần mềm rủi ro cao (Git, 7-Zip), đối chiếu NVD/MSRC, kèm chỉ số EPSS và CISA KEV.
 4. Chi tiết từng finding đủ **Evidence / Fix / Verify / Rollback**.
 5. Trạng thái khắc phục (đã áp dụng · đã thử và rollback · còn chờ).
-6. Kết luận đã bị bác bỏ và Giới hạn coverage.
+6. Kết luận đã bị bác bỏ và Giới hạn coverage (nêu rõ các mục bị chặn bởi `Access denied`).
+**Quy trình Main Agent thực thi lại các mục cần Elevated (Bắt buộc)**: Sau khi các subagent non-elevated hoàn thành, Main Agent PHẢI chủ động rà soát lại mục *Giới hạn coverage*, gom toàn bộ các lệnh bị chặn (như shadow copy, auditpol, secedit, AppLocker, quyền private key CA) thành **1 đợt elevated duy nhất qua UAC / sudo** để hỏi user cho phép chạy. Khi có kết quả elevated, cập nhật lại báo cáo chính biến các mục "chưa kiểm được" thành số liệu đo lường thực tế trước khi xuất bản.
 7. **Mục cuối cùng bắt buộc đính kèm đoạn prompt mẫu "Hướng dẫn tiếp theo: Chạy Interactive Remediation Triage"** để user có thể dán tiếp cho phiên sau.
 Report chứa topology/IP/path nội bộ ⇒ coi là tài liệu nội bộ, không push remote công khai. Trước khi bàn giao grep report cho `sk-`, `ghp_`, `ya29.`, `-----BEGIN`, `\d{6}(-\d{6}){7}`, `://[^/]+:[^/]+@` và redact.
 
