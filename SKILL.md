@@ -356,6 +356,17 @@ Ghi `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md` (hoặc đ�
 4. **Trạng thái khắc phục**: đã áp dụng (kèm verify) / đã thử và rollback (kèm lý do) / còn chờ (kèm điều kiện).
 5. **Kết luận đã bị bác bỏ**: giữ lại để người sau không lặp lại.
 6. **Giới hạn coverage**: chưa kiểm gì và vì sao.
+7. **Hướng dẫn tiếp theo (Interactive Remediation Triage)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng có thể copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding.
+
+Prompt mẫu bắt buộc phải có ở cuối report:
+```markdown
+## Hướng dẫn tiếp theo: Chạy Interactive Remediation Triage
+
+> "Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và lần lượt hỏi tôi về từng finding (từ P0, P1 đến P3). Với mỗi finding, hãy cung cấp rõ:
+> 1. Phương án Accept (chấp nhận rủi ro, phân tích hệ quả).
+> 2. Các phương án Fix cụ thể (tối thiểu, triệt để, kèm lệnh sẽ chạy, kiểm tra tác động phá chức năng nếu có).
+> Chỉ thực thi phương án khi tôi đã đưa ra quyết định lựa chọn."
+```
 
 **Phân loại dữ liệu report**: report chứa IP tailnet/LAN, hostname, tên gateway, endpoint nội bộ, đường dẫn credential — coi là **tài liệu nội bộ**. Không push sang remote công khai; nếu repo có nhiều remote, chỉ push nhánh lên remote nội bộ.
 
