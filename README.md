@@ -169,6 +169,17 @@ Report `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md`:
 
 Report chứa IP, hostname, đường dẫn nội bộ ⇒ **coi là tài liệu nội bộ**, đừng commit vào repo công khai.
 
+### Tương tác sau Audit (Interactive Triage Prompt)
+
+Sau khi hoàn tất audit và xuất report, **không nên tự ý sửa thủ công hay để Agent tự động sửa toàn bộ**. Bạn hãy dùng prompt mẫu sau để yêu cầu Agent phân tích và hỏi bạn từng finding:
+
+```markdown
+"Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và lần lượt hỏi tôi về từng finding (từ P0, P1 đến P3). Với mỗi finding, hãy cung cấp rõ:
+1. Phương án Accept (chấp nhận rủi ro, phân tích hệ quả).
+2. Các phương án Fix cụ thể (tối thiểu, triệt để, kèm lệnh sẽ chạy, kiểm tra tác động phá chức năng nếu có).
+Chỉ thực thi phương án khi tôi đã đưa ra quyết định lựa chọn."
+```
+
 ---
 
 ## Giới hạn & đạo đức
