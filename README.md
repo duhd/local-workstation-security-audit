@@ -20,21 +20,27 @@ Repo này là checklist thực thi cho bước "kiểm tra endpoint" đó — ch
 **Cách 1 — harness có skill loader** (macOS / Linux / Git Bash):
 
 ```bash
-mkdir -p "$HOME/.claude/skills"
+mkdir -p "$HOME/.claude/skills" "$HOME/.claude/commands"
 git clone https://github.com/duhd/local-workstation-security-audit \
   "$HOME/.claude/skills/local-workstation-security-audit"
-# kiểm tra rồi gọi:
-test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" && echo OK
+# slash command chỉ xuất hiện khi file nằm trong ~/.claude/commands/
+cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" \
+   "$HOME/.claude/commands/"
+# kiểm tra cả hai rồi gọi:
+test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" \
+  && ls "$HOME/.claude/commands/local-pc-security-audit.md" && echo OK
 /local-pc-security-audit
 ```
 
 **Cách 1b — Windows PowerShell:**
 
 ```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills" | Out-Null
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills","$env:USERPROFILE\.claude\commands" | Out-Null
 git clone https://github.com/duhd/local-workstation-security-audit `
   "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
-Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKILL.md"
+Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\commands\local-pc-security-audit.md" `
+  "$env:USERPROFILE\.claude\commands\"
+Test-Path "$env:USERPROFILE\.claude\commands\local-pc-security-audit.md"
 ```
 
 > Thay `.claude/skills` bằng thư mục skill của harness bạn dùng — layout này chỉ là ví dụ. Nếu harness không có khái niệm thư mục skill, dùng Cách 2.

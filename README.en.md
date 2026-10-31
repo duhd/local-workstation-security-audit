@@ -20,21 +20,27 @@ This repo is an executable checklist for that endpoint check — on Windows, mac
 **Option 1 — harness with a skill loader** (macOS / Linux / Git Bash):
 
 ```bash
-mkdir -p "$HOME/.claude/skills"
+mkdir -p "$HOME/.claude/skills" "$HOME/.claude/commands"
 git clone https://github.com/duhd/local-workstation-security-audit \
   "$HOME/.claude/skills/local-workstation-security-audit"
-# verify, then run:
-test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" && echo OK
+# the slash command only appears when the file lives in ~/.claude/commands/
+cp "$HOME/.claude/skills/local-workstation-security-audit/commands/local-pc-security-audit.md" \
+   "$HOME/.claude/commands/"
+# verify both, then run:
+test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" \
+  && ls "$HOME/.claude/commands/local-pc-security-audit.md" && echo OK
 /local-pc-security-audit
 ```
 
 **Option 1b — Windows PowerShell:**
 
 ```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills" | Out-Null
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills","$env:USERPROFILE\.claude\commands" | Out-Null
 git clone https://github.com/duhd/local-workstation-security-audit `
   "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
-Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKILL.md"
+Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\commands\local-pc-security-audit.md" `
+  "$env:USERPROFILE\.claude\commands\"
+Test-Path "$env:USERPROFILE\.claude\commands\local-pc-security-audit.md"
 ```
 
 > Replace `.claude/skills` with your harness's skill directory — that layout is only an example. If your harness has no concept of a skill directory, use Option 2.
