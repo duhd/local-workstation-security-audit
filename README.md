@@ -40,6 +40,14 @@ Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKIL
 
 **Cách 2 — không có skill loader:** mở `PROMPT.md`, dán toàn bộ nội dung vào agent.
 
+**Cập nhật lên bản mới** (sau này, khi skill thay đổi):
+
+```bash
+git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only
+```
+
+Ở Windows PowerShell: `git -C "$env:USERPROFILE\.claude\skills\local-workstation-security-audit" pull --ff-only`.
+
 **Điều kiện duy nhất:** agent phải có tool shell (Bash / PowerShell / terminal). Không có shell thì nó phải dừng và yêu cầu bạn dán output — **không** được mô tả lại checklist như thể đã kiểm.
 
 > **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md`, chạy Phase 1 → 9 (posture) rồi Phase 10 → 17 (attacker-first). Read-only mặc định. Không in secret. Nếu chỉ có thời gian cho một lượt, đi theo thứ tự ưu tiên trong `SKILL.md` (**17 → 10 → 12 → 11 → 14 → 13 → 15 → 16**). Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
@@ -63,18 +71,14 @@ Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKIL
 
 **Phase 1–9 — posture.** Patch OS (bằng update searcher, không bằng danh sách KB) · mã hoá ổ · TPM/Secure Boot/SIP · firewall + listener + ACL mạng overlay · credential at-rest · persistence · browser profile + extension + remote-access host · repo & lịch sử git · patch gap ứng dụng · severity · remediation · report.
 
-**Phase 10–17 — attacker-first.** Phần thường bị bỏ sót, vì nó không nằm trong checklist CIS nào:
+**Phase 10–17 — attacker-first.** Phần thường bị bỏ sót, vì nó không nằm trong checklist CIS nào. Bốn câu hỏi nó trả lời:
 
-| Phase | Câu hỏi duy nhất |
-|---|---|
-| 10 | **Ai còn đăng nhập được máy này?** `authorized_keys`, Credential Manager/Keychain, shell history, `AutoAdminLogon`, LSA protection |
-| 11 | **Chạy code của kẻ khác bằng cách nào?** PATH hijack, service path, service DACL, `SeImpersonate`, `AlwaysInstallElevated`, git hooks, registry package manager, WSL/docker, extension `update_url` |
-| 12 | **Secret còn ở đâu sau khi "đã xoá"?** tfstate, crash dump, editor backup, notebook output, Postman, Recycle Bin, shadow copy, `git fsck` |
-| 13 | **Kênh tin cậy có bị chiếm?** root CA lạ, updater, `winget source` |
-| 14 | **Còn phát hiện được gì?** audit policy, PowerShell 4104, Sysmon/AMSI, log retention, forwarder có thật nhận log |
-| 15 | **Kênh nào ngoài listener?** Wi-Fi PSK, LLMNR/NetBIOS, `.lnk/.scf` trong repo (lộ NTLM hash), spooler/WebDAV |
-| 16 | **Chạm được máy thì sao?** auto-login, khoá màn hình, boot order, BIOS password, hibernation |
-| 17 | **Bề mặt AI agent?** `.mcp.json` `command`, hook agent, `approvalMode`, transcript, daemon loopback không auth |
+- **Ai còn đăng nhập được máy này?** — `authorized_keys`, Credential Manager/Keychain, shell history, `AutoAdminLogon`, LSA protection.
+- **Chạy code của kẻ khác bằng cách nào?** — PATH hijack, service path/DACL, `SeImpersonate`, git hooks, registry package manager, WSL/docker, extension `update_url`.
+- **Secret còn ở đâu sau khi "đã xoá"?** — tfstate, crash dump, editor backup, notebook output, shadow copy, `git fsck`, và thư mục đang sync cloud.
+- **Còn phát hiện được gì, và kênh nào ngoài listener?** — audit policy, PowerShell 4104, Sysmon/AMSI, forwarder health; Wi-Fi PSK, LLMNR/NetBIOS, `.lnk/.scf` trong repo, spooler/WebDAV.
+
+Danh sách đầy đủ 8 phase kèm lệnh cho cả 3 OS nằm trong mục *Phạm vi bổ sung — attacker-first* của [`SKILL.md`](SKILL.md) — đó là bản duy nhất cần cập nhật khi thêm phase mới.
 
 ---
 

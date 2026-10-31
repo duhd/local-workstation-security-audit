@@ -40,6 +40,14 @@ Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKIL
 
 **Option 2 — no skill loader:** open `PROMPT.md` and paste the whole thing into your agent.
 
+**Update to a newer version** (later, when the skill changes):
+
+```bash
+git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only
+```
+
+On Windows PowerShell: `git -C "$env:USERPROFILE\.claude\skills\local-workstation-security-audit" pull --ff-only`.
+
 **The only requirement:** the agent must have a shell tool (Bash / PowerShell / terminal). Without a shell it must stop and ask you to paste command output — it must **not** describe the checklist as if it had been checked.
 
 > **For an agent reading this:** next step is `SKILL.md` — run Phase 1 → 9 (posture), then Phase 10 → 17 (attacker-first). Read-only by default. Never print secrets. If you only have time for one pass, follow the priority order in `SKILL.md` (**17 → 10 → 12 → 11 → 14 → 13 → 15 → 16**). Ask the user to choose an option per finding before changing anything on the machine.
@@ -63,18 +71,14 @@ Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKIL
 
 **Phase 1–9 — posture.** OS patch level (via update searcher, not a KB list) · disk encryption · TPM/Secure Boot/SIP · firewall + listeners + overlay-network ACL · credentials at rest · persistence · browser profiles, extensions, remote-access hosts · repos and git history · application patch gap · severity · remediation · report.
 
-**Phase 10–17 — attacker-first.** The part usually missed, because it appears in no CIS checklist:
+**Phase 10–17 — attacker-first.** The part usually missed, because it appears in no CIS checklist. Four questions it answers:
 
-| Phase | The one question |
-|---|---|
-| 10 | **Who can still log into this machine?** `authorized_keys`, Credential Manager/Keychain, shell history, `AutoAdminLogon`, LSA protection |
-| 11 | **How would someone else's code run?** PATH hijack, service paths, service DACLs, `SeImpersonate`, `AlwaysInstallElevated`, git hooks, package-manager registry, WSL/docker, extension `update_url` |
-| 12 | **Where do secrets live after "deletion"?** tfstate, crash dumps, editor backups, notebook output, Postman exports, Recycle Bin, shadow copies, `git fsck` |
-| 13 | **Is a trust channel compromised?** rogue root CAs, updaters, `winget source` |
-| 14 | **What can still be detected?** audit policy, PowerShell 4104, Sysmon/AMSI, log retention, whether forwarders actually receive logs |
-| 15 | **Which channels bypass listeners?** Wi-Fi PSK, LLMNR/NetBIOS, `.lnk/.scf` files in repos (NTLM hash leak), spooler/WebDAV |
-| 16 | **What if someone touches the machine?** auto-login, screen lock, boot order, BIOS password, hibernation |
-| 17 | **What is the AI-agent surface?** `.mcp.json` `command`, agent hooks, `approvalMode`, transcripts, unauthenticated loopback daemons |
+- **Who can still log into this machine?** — `authorized_keys`, Credential Manager/Keychain, shell history, `AutoAdminLogon`, LSA protection.
+- **How would someone else's code run?** — PATH hijack, service path/DACL, `SeImpersonate`, git hooks, package-manager registry, WSL/docker, extension `update_url`.
+- **Where do secrets live after "deletion"?** — tfstate, crash dumps, editor backups, notebook output, shadow copies, `git fsck`, cloud-synced folders.
+- **What can still be detected, and which channels bypass listeners?** — audit policy, PowerShell 4104, Sysmon/AMSI, forwarder health; Wi-Fi PSK, LLMNR/NetBIOS, `.lnk/.scf` files in repos, spooler/WebDAV.
+
+The full 8-phase breakdown with 3-OS commands lives in the *attacker-first* section of [`SKILL.md`](SKILL.md) — that is the only copy to update when a phase is added.
 
 ---
 
