@@ -3,6 +3,12 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.4.2] — 2026-11-01
+
+### Sửa lỗi
+
+- **Đồng bộ prompt mẫu ở Phase 9 với luật 2 nhánh của Phase 8**: prompt mẫu cuối report vẫn chỉ dẫn "sử dụng công cụ Ask Question", mâu thuẫn với việc v1.4.1 đã cho phép menu đánh số khi harness không có tool đó. Prompt mẫu nay ghi rõ: harness có `ask` / `AskUserQuestion` thì gọi tool, không có thì in menu đánh số và dừng chờ.
+
 ## [1.4.1] — 2026-11-01
 
 ### Sửa lỗi
