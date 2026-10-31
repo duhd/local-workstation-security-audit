@@ -49,6 +49,41 @@ reg query <key> /s
 
 `Access denied` **không** nghĩa "không tồn tại" ⇒ ghi vào *chưa kiểm được*, chuyển sang lượt 2.
 
+### Chạy multi-subagent (mặc định cho full audit)
+
+17 phase chạy tuần tự sẽ đốt context và dễ bỏ sót. Chia thành **4 slice độc lập**, mỗi subagent một slice, **tối đa 4 agent đồng thời**:
+
+| Slice | Phase | Nội dung |
+|---|---|---|
+| **A** | 17 + 10 | bề mặt AI agent (MCP `command`/hook/`approvalMode`/transcript/daemon loopback) + danh tính (authorized_keys, Credential Manager/Keychain, shell history, auto-logon, LSA/Credential Guard, cached logons, `klist`) |
+| **B** | 12 | secret trong artifact: tfstate/tfplan/tfvars, crash dump, editor backup, notebook output, Postman/Insomnia/HAR, Recycle Bin, shadow copy, `git fsck`/`git stash`, thư mục cloud sync |
+| **C** | 11 + 13 | thực thi code & privesc (PATH writable, service path/DACL, `SeImpersonate`, `AlwaysInstallElevated`, git hook/`include.path`/`insteadOf`, registry package manager, WSL/docker, native messaging, `.vscode/tasks.json`) + kênh tin cậy (root CA lạ, updater + quyền ghi binary, `winget source`, AppLocker/WDAC) |
+| **D** | 14 + 15 + 16 | năng lực phát hiện (audit policy, PS 4104, Sysmon/AMSI, log retention/1102, forwarder health) + mạng ngoài listener (Wi-Fi auth type, LLMNR/NetBIOS/mDNS, `.lnk/.scf` trong repo, spooler/WebClient, proxy/PAC/DoH) + vật lý/pre-boot (auto-login, screen lock, boot order, hibernation, escrow) |
+
+Giao theo thứ tự blast radius **A → B → C → D**, nhưng chạy song song được vì 4 slice không giao nhau.
+
+**Hợp đồng bắt buộc trong prompt của mỗi subagent** (7 điều, copy nguyên văn — thiếu 1 điều là không nhận kết quả):
+
+1. **READ-ONLY**: không sửa/xoá/tạo file, không đổi registry/ACL, không start/stop service.
+2. **Không in secret**: chỉ đường dẫn, tên key, số lượng, độ dài, boolean. Không in nội dung key/token/PSK/env value.
+3. **Positive control** cho mỗi phép tìm; control = 0 ⇒ ghi "kênh đo hỏng", không ghi "không có".
+4. **3 trạng thái**: finding / đã kiểm sạch / chưa kiểm được (kèm lý do).
+5. `Access denied` ⇒ "chưa kiểm (cần elevated)", **không** kết luận "không có".
+6. Không chạy PoC, không gọi API ngoài, không thử dùng credential tìm được.
+7. Output đúng 4 mục: `## Findings` (bảng: mục | bằng chứng lệnh+output | mức đề xuất | Fix | Verify | Rollback), `## Đã kiểm và sạch`, `## Chưa kiểm được`, `## Bẫy gặp phải`.
+
+**Việc của parent — không delegate:**
+
+- Là **người duy nhất ghi report**; dedupe finding trùng giữa các slice (cùng một nguyên nhân xuất hiện ở 2 slice ⇒ 1 dòng, ghi rõ 2 nguồn).
+- Chuẩn hoá mức severity theo *Phase 7* — subagent chỉ **đề xuất**, parent quyết.
+- Giữ **coverage ledger**: mỗi mục thuộc đúng 1 trong 3 trạng thái; mục "chưa kiểm" phải nêu lý do và bước chạy tiếp.
+- Nếu một agent trả về mỏng, không có positive control, hoặc ghi "sạch" mà không kèm lệnh ⇒ **chạy lại slice đó** với phạm vi hẹp hơn. Không chấp nhận "sạch" thiếu bằng chứng.
+- Ghi vào report slice nào đã chạy, slice nào chưa, và môi trường có subagent hay không.
+
+**Cấm**: hai agent cùng sửa một file; agent tự apply fix (mọi mutation vẫn qua Phase 8 + quyết định của user); agent chạy phase ngoài slice của mình (trùng lặp ⇒ tốn và lệch số liệu).
+
+**Không có tool subagent?** Chạy tuần tự theo đúng thứ tự ưu tiên *17 → 10 → 12 → 11 → 14 → 13 → 15 → 16*, và ghi rõ trong report là chạy đơn luồng.
+
 ## Phase 1 — Recon & posture
 
 | Hạng mục | Windows | macOS | Linux |
@@ -78,104 +113,6 @@ OS patch ≠ ứng dụng patch. Máy có thể vá OS đầy đủ nhưng brows
 Cách đọc: so **installed vs latest stable**. Patch release của browser (ví dụ `X.Y.Z.41` → `X.Y.Z.47`, cùng major) gần như luôn chứa bản vá bảo mật ⇒ lệch ≥1 patch = cần update. Remote-access host lệch **major** version trong khi service đang chạy là finding mức High nếu ổ chưa mã hoá.
 
 Giới hạn phải nêu rõ trong report: **patch gap ≠ CVE mapping**. Muốn khẳng định "dính CVE-X" phải đối chiếu NVD/MSRC + release notes; nếu chưa làm thì ghi "lệch bản mới nhất, mức khai thác chưa xác định".
-
-### CVE mapping (chỉ cho nhóm rủi ro cao)
-
-Không map toàn bộ 500 app đã cài — vô nghĩa và tốn thời gian. Chỉ map nhóm mà CVE dẫn thẳng tới thực thi code hoặc chiếm máy:
-
-1. browser (Chrome/Edge/Firefox/Safari) và engine của nó;
-2. remote-access host (Chrome Remote Desktop, AnyDesk, RustDesk, TeamViewer);
-3. OS component có bản vá tháng (Windows cumulative, driver đồ hoạ);
-4. VPN/proxy client (WARP, Tailscale, OpenVPN);
-5. trình đọc/giải nén file không tin cậy (7-Zip, PDF reader, Office).
-
-Nguồn (chỉ GET, không cần account). Ba biến thể dưới đây **đã chạy thật**; con số là giá trị kỳ vọng để làm positive control:
-
-```
-# 1) keyword + vendor — rộng, dùng khi chưa biết CPE  (200, 7.440 kết quả với ví dụ này)
-https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=chrome&virtualMatchString=cpe:2.3:a:google&resultsPerPage=1
-
-# 2) cpeName — CHỈ nhận version cụ thể  (200, 4.103 kết quả)
-https://services.nvd.nist.gov/rest/json/cves/2.0?cpeName=cpe:2.3:a:google:chrome:120.0.6099.109:*:*:*:*:*:*:*&resultsPerPage=1
-
-# 3) keyword thuần  (200, 7.819 kết quả)
-https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=chrome&resultsPerPage=1
-
-# Microsoft Security Update Guide (Edge, Windows component)  (200, 500 phần tử/trang)
-https://api.msrc.microsoft.com/sug/v2.0/en-US/vulnerability
-
-# Chrome release notes — mỗi stable update liệt kê CVE đã vá
-https://chromereleases.googleblog.com
-```
-
-**Bẫy đã đo, đừng mất thời gian**: `cpeName` với `*` ở trường version (`cpe:2.3:a:google:chrome:*:*:…`) trả **404**, và CPE rút gọn (`cpe:2.3:a:google:chrome`) cũng **404**. `cpeName` chỉ trả 200 khi có **version cụ thể** — và đó chính là thứ audit luôn có sẵn (version đang cài), nên dùng nó làm đường chính. Cần URL-encode dấu `:` (`cpe%3A2.3%3A...`) khi gọi từ shell.
-
-Lưu ý về ví dụ 1: `keywordSearch` + `virtualMatchString` trả 200 nhưng kết quả **chủ yếu do keyword quyết định** (7.440 so với 7.819 của keyword thuần) — `virtualMatchString` chỉ thu hẹp theo vendor. Đừng đọc nó là "đã lọc đúng CPE"; muốn khớp chính xác phải dùng `cpeName` với version.
-
-**404 ≠ endpoint hỏng**: NVD trả 404 khi CPE không có bản ghi hoặc sai định dạng. Luôn chạy positive control `?keywordSearch=chrome&resultsPerPage=1` (đo được **7.819**) trước khi kết luận; nếu positive control cũng 0/404 thì đó là mạng chứ không phải "máy không có CVE".
-
-Rate limit NVD: **5 request / 30 giây** khi không có API key (50 nếu có) — chèn delay giữa các lần gọi, đừng vòng lặp dày.
-
-**Cách đọc kết quả:**
-
-1. Lấy version đang cài (đã có từ bước patch gap).
-2. Với mỗi CVE trả về, đọc `configurations[].nodes[].cpeMatch[]`: nếu version đang cài thoả `versionStartIncluding ≤ installed < versionEndExcluding` ⇒ **còn ảnh hưởng**; nếu `installed ≥ versionEndExcluding` ⇒ **đã vá**.
-3. Ghi vào report: `CVE-id`, CVSS + vector, `fixed version`, tên nguồn, **ngày truy vấn**, và kết luận `affected / patched / not applicable`.
-
-**Luật:**
-
-- **Positive control bắt buộc**: chạy `?keywordSearch=chrome&resultsPerPage=1` (đo được **7.819** kết quả) hoặc `?cpeName=<CPE có version cụ thể>` (đo được **200**). Nếu positive control cùng trả 0/404 ⇒ mạng bị chặn hoặc rate limit: ghi "chưa truy vấn được", **không** kết luận "không có CVE". (Nhớ: `cpe:2.3:a:google:chrome` rút gọn và mọi CPE có `*` ở trường version đều trả **404** — không dùng chúng làm control.)
-- Không chạy PoC, không tải exploit, không thử khai thác để "xác nhận".
-- Không gửi credential/PAT khi gọi API ngoài.
-- Nếu version đang cài cũ hơn nhiều major (như remote-access host lệch 3 major), việc map từng CVE là không cần thiết — kết luận "lệch nhiều major, phải update" đã đủ mạnh và đúng.
-
-### Mô hình Grype áp cho máy trạm (5 bước)
-
-Grype quét container/filesystem theo pipeline *catalog → match → enrich → policy → output*. Máy trạm không có SBOM sẵn, nên dựng "SBOM-lite" trước rồi đi đúng 5 bước đó:
-
-**1. Catalog (SBOM-lite)** — liệt kê theo ecosystem, không đoán từ tên file:
-
-| Nguồn | Lệnh |
-|---|---|
-| Windows package | `winget list --accept-source-agreements`; `Get-Package`; registry Uninstall |
-| Windows driver | `Get-CimInstance Win32_PnPSignedDriver \| Select-Object DeviceName,DriverVersion` |
-| macOS app | `brew list --versions`; `system_profiler SPApplicationsDataType` |
-| Linux distro | `dpkg-query -W -f='${Package} ${Version}\n'` / `rpm -qa --qf '%{NAME} %{VERSION}-%{RELEASE}\n'` / `apk info -v` / `snap list` / `flatpak list --columns=application,version` |
-| Language runtime | `npm ls -g --depth=0 --json`; `pip list --format=json`; `gem list`; `cargo install --list`; `dotnet --list-runtimes`; `go version -m <bin>` |
-
-Ghi `name | version | ecosystem | source`. Đây là artifact **stateful** — lưu cạnh report, không commit vào repo public.
-
-**2. Match có version constraint** — chọn nguồn theo ecosystem (đừng dùng NVD cho mọi thứ):
-
-| Ecosystem | Nguồn khớp | Đã đo |
-|---|---|---|
-| Distro package | USN / DSA / RHSA / ALAS — version scheme riêng, NVD không so được | – |
-| App third-party | NVD: `keywordSearch` + `virtualMatchString=cpe:2.3:a:<vendor>` (200); `cpeName` chỉ khi có **version cụ thể** (200) | ✓ |
-| Windows / Edge component | MSRC `https://api.msrc.microsoft.com/sug/v2.0/en-US/vulnerability` | ✓ 200, 500 item/trang |
-| npm / pip / go / cargo / gem | OSV `POST https://api.osv.dev/v1/query` (GET trả 405 — phải POST); GHSA `https://api.github.com/advisories?ecosystem=<eco>` | ✓ 405 ở GET nghĩa là endpoint sống |
-
-Mỗi dòng kết quả phải có: `CVE/GHSA`, `installed`, `range` (`versionStartIncluding` / `versionEndExcluding`), `fix.version`, và **`fix.state`** = `fixed | wont-fix | unknown`.
-
-**3. Enrich để xếp hạng** (Grype không xếp chỉ bằng CVSS):
-
-- **EPSS**: `https://api.first.org/data/v1/epss?cve=CVE-…` → trả `epss` + `percentile`. **Đã đo: 200.**
-- **CISA KEV**: `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` — **đo được 403 (trả HTML) từ mạng này**. Nếu bị chặn: ghi "chưa truy vấn được KEV", dùng EPSS + advisory vendor, **không** kết luận "không bị khai thác".
-- Thứ tự ưu tiên: **KEV > EPSS ≥ 0.1 > CVSS cao nhưng EPSS thấp**.
-
-**4. Policy / VEX** — tương đương `ignore` của Grype, nhưng có hạn:
-
-```yaml
-# .audit-vex.yaml, đặt cạnh report
-- id: CVE-2023-XXXX
-  package: some-tool
-  reason: "không dùng tính năng bị ảnh hưởng; đã có compensating control X"
-  expires: 2026-12-31
-```
-
-Mỗi lần chạy đọc lại file này; mục **quá `expires` tự nổi lên lại**. Không có `expires` ⇒ không được suppress.
-Gate mặc định: flag khi `fix.state=fixed` **và** (`KEV` hoặc `EPSS ≥ 0.1` hoặc `CVSS ≥ 7`). `wont-fix` ⇒ đưa vào mục *accepted risk* kèm biện pháp bù, không im lặng bỏ.
-
-**5. Output tái lập** — report phải ghi: timestamp truy vấn, tên + phiên bản nguồn dữ liệu (NVD/MSRC/EPSS), và CVE chia 3 nhóm `actionable / accepted / not-applicable`. Không có timestamp thì lần sau không so sánh được, và không ai biết kết luận cũ còn đúng không.
 
 ## Phase 2 — Bí mật nằm trên đĩa
 
