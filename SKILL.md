@@ -89,7 +89,7 @@ Không map toàn bộ 500 app đã cài — vô nghĩa và tốn thời gian. Ch
 4. VPN/proxy client (WARP, Tailscale, OpenVPN);
 5. trình đọc/giải nén file không tin cậy (7-Zip, PDF reader, Office).
 
-Nguồn (chỉ GET, không cần account). Ba biến thể dưới đây **đã chạy thật** ngày 2026-10-31:
+Nguồn (chỉ GET, không cần account). Ba biến thể dưới đây **đã chạy thật**; con số là giá trị kỳ vọng để làm positive control:
 
 ```
 # 1) keyword + vendor — rộng, dùng khi chưa biết CPE  (200, 7.440 kết quả với ví dụ này)
@@ -115,6 +115,19 @@ Lưu ý về ví dụ 1: `keywordSearch` + `virtualMatchString` trả 200 nhưng
 **404 ≠ endpoint hỏng**: NVD trả 404 khi CPE không có bản ghi hoặc sai định dạng. Luôn chạy positive control `?keywordSearch=chrome&resultsPerPage=1` (đo được **7.819**) trước khi kết luận; nếu positive control cũng 0/404 thì đó là mạng chứ không phải "máy không có CVE".
 
 Rate limit NVD: **5 request / 30 giây** khi không có API key (50 nếu có) — chèn delay giữa các lần gọi, đừng vòng lặp dày.
+
+**Cách đọc kết quả:**
+
+1. Lấy version đang cài (đã có từ bước patch gap).
+2. Với mỗi CVE trả về, đọc `configurations[].nodes[].cpeMatch[]`: nếu version đang cài thoả `versionStartIncluding ≤ installed < versionEndExcluding` ⇒ **còn ảnh hưởng**; nếu `installed ≥ versionEndExcluding` ⇒ **đã vá**.
+3. Ghi vào report: `CVE-id`, CVSS + vector, `fixed version`, tên nguồn, **ngày truy vấn**, và kết luận `affected / patched / not applicable`.
+
+**Luật:**
+
+- **Positive control bắt buộc**: chạy `?keywordSearch=chrome&resultsPerPage=1` (đo được **7.819** kết quả) hoặc `?cpeName=<CPE có version cụ thể>` (đo được **200**). Nếu positive control cùng trả 0/404 ⇒ mạng bị chặn hoặc rate limit: ghi "chưa truy vấn được", **không** kết luận "không có CVE". (Nhớ: `cpe:2.3:a:google:chrome` rút gọn và mọi CPE có `*` ở trường version đều trả **404** — không dùng chúng làm control.)
+- Không chạy PoC, không tải exploit, không thử khai thác để "xác nhận".
+- Không gửi credential/PAT khi gọi API ngoài.
+- Nếu version đang cài cũ hơn nhiều major (như remote-access host lệch 3 major), việc map từng CVE là không cần thiết — kết luận "lệch nhiều major, phải update" đã đủ mạnh và đúng.
 
 ### Mô hình Grype áp cho máy trạm (5 bước)
 
@@ -163,19 +176,6 @@ Mỗi lần chạy đọc lại file này; mục **quá `expires` tự nổi lê
 Gate mặc định: flag khi `fix.state=fixed` **và** (`KEV` hoặc `EPSS ≥ 0.1` hoặc `CVSS ≥ 7`). `wont-fix` ⇒ đưa vào mục *accepted risk* kèm biện pháp bù, không im lặng bỏ.
 
 **5. Output tái lập** — report phải ghi: timestamp truy vấn, tên + phiên bản nguồn dữ liệu (NVD/MSRC/EPSS), và CVE chia 3 nhóm `actionable / accepted / not-applicable`. Không có timestamp thì lần sau không so sánh được, và không ai biết kết luận cũ còn đúng không.
-
-Cách đọc kết quả:
-
-1. Lấy version đang cài (đã có từ bước patch gap).
-2. Với mỗi CVE trả về, đọc `configurations[].nodes[].cpeMatch[]`: nếu version đang cài thoả `versionStartIncluding ≤ installed < versionEndExcluding` ⇒ **còn ảnh hưởng**; nếu `installed ≥ versionEndExcluding` ⇒ **đã vá**.
-3. Ghi vào report: `CVE-id`, CVSS + vector, `fixed version`, tên nguồn, **ngày truy vấn**, và kết luận "affected / patched / not applicable".
-
-Luật:
-
-- **Positive control bắt buộc**: query một CPE đã biết chắc có CVE (ví dụ `cpe:2.3:a:google:chrome`) phải trả > 0. Nếu 0 kết quả ⇒ mạng bị chặn hoặc rate limit, ghi "chưa truy vấn được", **không** kết luận "không có CVE".
-- Không chạy PoC, không tải exploit, không thử khai thác để "xác nhận".
-- Không gửi credential/PAT khi gọi API ngoài.
-- Nếu version đang cài cũ hơn nhiều major (như remote-access host lệch 3 major), việc map từng CVE là không cần thiết — kết luận "lệch nhiều major, phải update" đã đủ mạnh và đúng.
 
 ## Phase 2 — Bí mật nằm trên đĩa
 
