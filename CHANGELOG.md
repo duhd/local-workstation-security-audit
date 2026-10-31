@@ -3,6 +3,13 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.2.0] — 2026-10-31
+
+### Thêm & Cải tiến
+
+- **Bắt buộc Full CVE Report ngay lập tức (Immediate Full CVE Report)**: Cập nhật Phase 9 của `SKILL.md` và Bước 8 của `PROMPT.md` quy định cứng việc xuất bản bảng phân tích CVE lỗ hổng (OS, Browser, Remote-Access, High-Risk Apps) tích hợp đầy đủ ngay trong báo cáo audit chính, không tách rời hoặc chờ user yêu cầu.
+- **Interactive Remediation Triage**: Chuẩn hoá mục hướng dẫn và prompt tương tác sau audit vào cấu trúc báo cáo bắt buộc và cả hai bản README (VI/EN), giúp Agent và người dùng lần lượt duyệt qua từng finding với các phương án Accept / Fix an toàn.
+
 ## [1.1.0] — 2026-10-31
 
 ### Thêm
