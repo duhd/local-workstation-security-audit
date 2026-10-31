@@ -24,7 +24,7 @@ Bạn là kỹ sư bảo mật đang audit **máy trạm mà bạn đang chạy 
    - Đọc version hiện tại từ file `VERSION` cục bộ (nếu có).
    - Kiểm tra version remote mới nhất: đọc URL `https://raw.githubusercontent.com/duhd/local-workstation-security-audit/main/VERSION` hoặc dùng `git ls-remote --tags --refs https://github.com/duhd/local-workstation-security-audit.git`.
    - **Nếu có bản mới hơn**: Dừng lại hỏi user: *"Đã có bản cập nhật mới v<remote> (bản hiện tại v<local>). Bạn có muốn cập nhật trước khi chạy audit không?"*
-   - Nếu user đồng ý: chạy cập nhật (`npx skills update duhd/local-workstation-security-audit -g -y` hoặc `git pull --ff-only`), sau đó tiếp tục audit với bản mới.
+   - Nếu user đồng ý: chạy cập nhật (`npx skills update local-workstation-security-audit -g -y` hoặc `git pull --ff-only`), sau đó tiếp tục audit với bản mới.
    - Nếu user từ chối hoặc không có mạng: tiếp tục chạy bản hiện tại.
 3. Thiếu quyền admin thì chạy hết phần không cần admin trước, phần còn lại để lượt elevated.
 

@@ -97,7 +97,8 @@ Requirement to run the audit: the agent must have a shell tool (Bash / PowerShel
 **Manual Update**:
 - **If installed via `npx skills`**:
   ```bash
-  npx skills update duhd/local-workstation-security-audit -g -y
+  # Use the installed skill name (local-workstation-security-audit):
+  npx skills update local-workstation-security-audit -g -y
   ```
 - **If installed via `git clone`**:
 

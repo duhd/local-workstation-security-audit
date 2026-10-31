@@ -98,7 +98,8 @@ Mở file [`PROMPT.md`](PROMPT.md), copy toàn bộ nội dung và dán vào c�
 **Cập nhật thủ công lên bản mới**:
 - **Nếu cài qua `npx skills`**:
   ```bash
-  npx skills update duhd/local-workstation-security-audit -g -y
+  # Dùng tên skill đã cài đặt (local-workstation-security-audit):
+  npx skills update local-workstation-security-audit -g -y
   ```
 - **Nếu cài qua `git clone`**:
 

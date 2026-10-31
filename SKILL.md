@@ -42,7 +42,7 @@ Trước khi chạy audit, Agent PHẢI kiểm tra xem bản cài đặt cục b
    - Dừng lại 1 nhịp và hỏi người dùng:
      > *"Phát hiện phiên bản mới của skill: v<local> → v<remote>. Bạn có muốn cập nhật lên bản mới nhất trước khi chạy audit không?"*
    - Nếu người dùng đồng ý:
-     - Nếu cài qua `npx skills`: chạy `npx skills update duhd/local-workstation-security-audit -g -y`
+     - Nếu cài qua `npx skills`: chạy `npx skills update local-workstation-security-audit -g -y`
      - Nếu cài qua git clone: chạy `git -C <skill-dir> pull --ff-only` (và copy lại command nếu cần).
      - Tiếp tục chạy audit trên phiên bản mới.
    - Nếu người dùng từ chối: tiếp tục chạy phiên bản hiện tại.
