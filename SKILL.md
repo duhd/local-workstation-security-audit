@@ -346,6 +346,53 @@ Mỗi thay đổi phải được đo lại **bằng đúng phép đo đã dùng
 | FileVault | `fdesetup enable` (lưu recovery key) | `fdesetup status` | `fdesetup disable` |
 | LUKS | kiểm `cryptsetup status <dev>` trước khi cài | `lsblk -f` | n/a |
 
+
+### Hướng dẫn Hardening chủ động (Proactive Baseline Hardening) — Tùy biến theo từng OS
+
+Ngoài việc sửa các finding sau khi phát hiện lỗi (Reactive Remediation), một máy trạm cho Dev / DevOps / Staff PHẢI được áp dụng bộ cấu hình an ninh phòng ngừa chủ động (Proactive Hardening Baseline) thiết kế chuyên biệt cho từng hệ điều hành:
+
+#### 1. Windows Hardening Baseline (PowerShell / Admin)
+
+| Nhóm kiểm soát | Mục tiêu an ninh | Lệnh cấu hình khuyến nghị | Rollback |
+|---|---|---|---|
+| **LSA Protection (RunAsPPL)** | Chống inject code và dump credential từ LSASS (Mimikatz) | `Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name 'RunAsPPL' -Value 2 -Type DWord` | Đổi Value về `0` hoặc `1` |
+| **Credential Guard** | Cô lập NTLM/Kerberos hash trong VBS enclave | Bật GPO `Computer Configuration -> Administrative Templates -> System -> Device Guard` | Tắt policy |
+| **Poisoning Defense** | Tắt LLMNR và NetBIOS broadcast (chống NTLM Relay) | `New-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient' -Force; Set-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient' -Name 'EnableMulticast' -Value 0 -Type DWord` | Xoá value `EnableMulticast` |
+| **Memory Dump Hygiene** | Tắt Fast Startup & Hibernation để RAM không lưu xuống đĩa unencrypted | `powercfg /h off` | `powercfg /h on` |
+| **Print Spooler** | Tắt Print Spooler (chống PrintNightmare) nếu không dùng máy in | `Set-Service Spooler -StartupType Disabled; Stop-Service Spooler` | `Set-Service Spooler -StartupType Automatic; Start-Service Spooler` |
+| **Attack Surface Reduction** | Bật Defender ASR chặn Office/Script spawn process & LSASS theft | `Set-MpPreference -AttackSurfaceReductionRules_Ids 92e63a44-e0e6-4b4f-8a48-8dfa1d8c1995,d4f940ab-401b-4efc-a9ad-ad5f3c506822 -AttackSurfaceReductionRules_Actions Enabled,Enabled` | Đổi Actions sang `AuditMode` hoặc `Disabled` |
+| **SMB Security** | Tắt SMBv1, ép buộc SMB Signing | `Set-SmbServerConfiguration -EnableSMB1Protocol $false -RequireSecuritySignature $true -Force` | Đặt lại giá trị cũ |
+| **UAC Strictness** | Bắt buộc nhập mật khẩu khi chạy tác vụ Administrator | `Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'ConsentPromptBehaviorAdmin' -Value 2 -Type DWord` | Đổi lại về `5` (Prompt for consent) |
+| **Dev PATH Hygiene** | Đưa các thư mục user-writable (`AppData\Local\...`) xuống sau `System32` | Sửa lại thứ tự trong biến môi trường Machine `PATH` qua System Properties hoặc `setx` | Sắp xếp lại |
+
+#### 2. macOS Hardening Baseline (Zsh / sudo)
+
+| Nhóm kiểm soát | Mục tiêu an ninh | Lệnh cấu hình khuyến nghị | Rollback |
+|---|---|---|---|
+| **System Integrity (SIP)** | Đảm bảo SIP (rootless) luôn ở trạng thái bật | Kiểm tra `csrutil status`. Nếu disabled, phải vào Recovery Mode bật lại: `csrutil enable` | `csrutil disable` (chỉ trong Recovery) |
+| **Gatekeeper & Notarization** | Chặn chạy app chưa được Apple ký số & xác minh | `sudo spctl --master-enable` | `sudo spctl --master-disable` |
+| **Firewall (ALF)** | Bật Application Firewall và chế độ Stealth mode | `sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on`<br>`sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on` | `sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off` |
+| **FileVault Key Hygiene** | Huỷ key FileVault khỏi RAM khi máy vào chế độ Standby/Sleep | `sudo pmset -a destroyfvkeyonstandby 1` | `sudo pmset -a destroyfvkeyonstandby 0` |
+| **Remote Access Shutdown** | Tắt Remote Login (SSH) và Remote Management (VNC) nếu không dùng | `sudo systemsetup -setremotelogin off`<br>`sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -deactivate -stop` | `sudo systemsetup -setremotelogin on` |
+| **Sudo Password Caching** | Không dùng NOPASSWD và giới hạn thời gian nhớ mật khẩu sudo | Xoá các file cấp quyền tự do trong `/etc/sudoers.d/`, cấu hình `timestamp_timeout=0` | Khôi phục cấu hình sudoers |
+| **Dev Tooling Paths** | Kiểm tra file cấu hình PATH trong `/etc/paths` và `~/.zshrc` | Đảm bảo `/usr/bin`, `/bin` luôn đứng trước các thư mục home user (`~/.bin`, `/usr/local/bin`) | Điều chỉnh lại file `.zshrc` |
+
+#### 3. Linux Hardening Baseline (Bash / sudo)
+
+| Nhóm kiểm soát | Mục tiêu an ninh | Lệnh cấu hình khuyến nghị | Rollback |
+|---|---|---|---|
+| **Kernel Ptrace Scope** | Ngăn process user đọc/dump bộ nhớ của process khác | `sudo sysctl -w kernel.yama.ptrace_scope=2`<br>(Ghi vào `/etc/sysctl.d/10-ptrace.conf` để giữ sau reboot) | `sudo sysctl -w kernel.yama.ptrace_scope=0` |
+| **Core Dumps Restriction** | Vô hiệu hoá sinh file crash dump chứa memory secret | Thêm `* hard core 0` vào `/etc/security/limits.conf` và `fs.suid_dumpable = 0` vào sysctl | Xoá cấu hình limits |
+| **Host Firewall (UFW/nft)** | Thiết lập Default Deny cho toàn bộ inbound traffic | `sudo ufw default deny incoming`<br>`sudo ufw default allow outgoing`<br>`sudo ufw enable` | `sudo ufw disable` |
+| **SSH Daemon Hardening** | Tắt đăng nhập password, cấm root, chỉ nhận key có passphrase | Trong `/etc/ssh/sshd_config`: `PermitRootLogin no`, `PasswordAuthentication no`, `MaxAuthTries 3` | Đặt lại `yes` và restart sshd |
+| **mDNS / LLMNR Shutdown** | Tắt Avahi và LLMNR chống broadcast poisoning | `sudo systemctl stop avahi-daemon; sudo systemctl disable avahi-daemon`<br>Trong `/etc/systemd/resolved.conf`: đặt `LLMNR=no` | `sudo systemctl enable avahi-daemon` |
+| **Docker Socket Isolation** | Không đưa user dev vào group `docker` (root-equivalent trên Linux) | `sudo gpasswd -d <user> docker` (dùng rootless docker hoặc podman thay thế) | `sudo usermod -aG docker <user>` |
+| **Kernel Module Lockdown** | Bật module verification và lockdown nếu kernel hỗ trợ | Thêm `lockdown=integrity` vào kernel boot parameters (GRUB) | Xoá param trong GRUB |
+
+#### 4. AI Agent & Toolchain Hardening (Áp dụng chung mọi OS)
+- **Agent Execution Sandbox**: Cấm chạy các harness AI ở chế độ `yolo` / `auto-accept` trên các thư mục dự án lạ. Luôn cấu hình `commandConfirmation: always`.
+- **MCP Server Pinning**: Không dùng tag `@latest` hoặc `uvx` tự động kéo package mới trong cấu hình `.mcp.json`. Luôn ghim SHA hoặc version cụ thể để chống tấn công chuỗi cung ứng (Supply Chain).
+- **Vault Isolation**: Tuyệt đối không lưu secret/key trong biến môi trường vĩnh viễn (`.bashrc`, `.zshrc`, Machine Environment). Sử dụng SOPS, Vault CLI hoặc 1Password CLI để inject token theo phiên làm việc.
 ## Phase 9 — Report
 
 Ghi `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md` (hoặc đường dẫn user chọn). **Bắt buộc full ngay từ đầu**: Report audit và Báo cáo phân tích CVE lỗ hổng phần mềm/trình duyệt/OS PHẢI được xuất bản ĐẦY ĐỦ NGAY LẬP TỨC trong cùng một lần chạy, không được tách rời hay để chờ user yêu cầu mới làm.

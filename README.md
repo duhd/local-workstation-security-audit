@@ -142,6 +142,13 @@ Sau khi copy, khởi động lại harness (hoặc reload skills) để lệnh x
 
 Danh sách đầy đủ 8 phase kèm lệnh cho cả 3 OS nằm trong mục *Phạm vi bổ sung — attacker-first* của [`SKILL.md`](SKILL.md) — đó là bản duy nhất cần cập nhật khi thêm phase mới.
 
+### Hardening chủ động (Customized theo OS)
+
+Không chỉ dừng lại ở việc phát hiện và vá lỗ hổng (Reactive), skill cung cấp bộ cấu hình **Hardening Baseline chủ động** thiết kế riêng cho từng hệ điều hành:
+- **Windows**: LSA RunAsPPL chống Mimikatz LSASS, Credential Guard, tắt LLMNR/NetBIOS broadcast, tắt Fast Startup dump RAM, Defender ASR rules, UAC Strictness (Credentials prompt), sắp xếp lại PATH.
+- **macOS**: Ép bật SIP & Gatekeeper, Application Firewall Stealth mode, huỷ key FileVault khỏi RAM khi sleep (`destroyfvkeyonstandby`), tắt Remote Login/VNC, giới hạn timeout sudo.
+- **Linux**: Giới hạn ptrace scope (`kernel.yama.ptrace_scope = 2`), cấm core dump (`limits.conf`), UFW Default Deny, cô lập Docker socket (không đưa user vào group `docker`), SSH daemon hardening.
+- **AI Agent & Dev Tooling**: Pin version MCP server, cấm auto-accept trên repo lạ, cách ly vault/token không lưu biến môi trường cố định.
 ---
 
 ## Năm nguyên tắc khiến report này khác một checklist

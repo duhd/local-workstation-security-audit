@@ -141,6 +141,13 @@ After copying, restart the harness (or reload skills) so the command appears.
 
 The full 8-phase breakdown with 3-OS commands lives in the *attacker-first* section of [`SKILL.md`](SKILL.md) — that is the only copy to update when a phase is added.
 
+### Proactive Workstation Hardening (OS-Customized)
+
+Beyond reactive remediation of discovered vulnerabilities, the skill provides a **Proactive Hardening Baseline** tailored for each operating system:
+- **Windows**: RunAsPPL (LSASS Mimikatz defense), Credential Guard, disable LLMNR/NetBIOS broadcast, disable Fast Startup RAM dumps, Defender ASR rules, UAC credential prompt strictness, and PATH reordering.
+- **macOS**: Enforce SIP & Gatekeeper, Application Firewall Stealth mode, destroy FileVault keys from RAM on standby (`destroyfvkeyonstandby`), disable Remote Login/VNC, and sudo timeout restrictions.
+- **Linux**: Restrict ptrace scope (`kernel.yama.ptrace_scope = 2`), disable core dumps (`limits.conf`), UFW Default Deny, Docker socket isolation (keep user out of `docker` group), and SSH daemon hardening.
+- **AI Agent & Dev Tooling**: Pin MCP server versions, prohibit `auto-accept` on untrusted repos, and isolate credentials outside permanent shell profiles.
 ---
 
 ## Five principles that make this different from a checklist
