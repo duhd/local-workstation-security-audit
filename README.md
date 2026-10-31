@@ -93,7 +93,14 @@ Mở file [`PROMPT.md`](PROMPT.md), copy toàn bộ nội dung và dán vào c�
 
 Điều kiện để chạy audit: agent phải có tool shell (Bash / PowerShell / terminal). Không có shell thì nó phải dừng và yêu cầu bạn dán output — **không** được mô tả lại checklist như thể đã kiểm.
 
-**Cập nhật lên bản mới** (sau này, khi skill thay đổi):
+**Tự động kiểm tra bản mới**: Skill và Prompt đã tích hợp sẵn bước kiểm tra phiên bản mới nhất trên GitHub ở đầu mỗi lần chạy. Nếu phát hiện bản mới, Agent sẽ tự động hỏi ý kiến bạn trước khi tiến hành cập nhật.
+
+**Cập nhật thủ công lên bản mới**:
+- **Nếu cài qua `npx skills`**:
+  ```bash
+  npx skills update duhd/local-workstation-security-audit -g -y
+  ```
+- **Nếu cài qua `git clone`**:
 
 ```bash
 git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only

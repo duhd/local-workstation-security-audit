@@ -3,6 +3,18 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.3.0] — 2026-10-31
+
+### Thêm & Nâng cấp
+
+- **Tự động kiểm tra bản cập nhật Skill từ GitHub**: Tích hợp Bước 0 kiểm tra version mới nhất trên remote repository trước mỗi phiên audit. Nếu có bản mới hơn, Agent sẽ dừng lại hỏi người dùng xác nhận cập nhật (`npx skills update` hoặc `git pull`).
+- **Bộ Proactive Baseline Hardening tùy biến chuyên sâu cho từng OS**:
+  - **Windows**: LSA Protection (RunAsPPL=2), Credential Guard, tắt broadcast LLMNR/NetBIOS, Defender ASR rules, UAC prompt strictness, dọn dẹp PATH.
+  - **macOS**: Ép bật SIP & Gatekeeper, Application Firewall Stealth mode, huỷ key FileVault khỏi RAM khi sleep (`destroyfvkeyonstandby`), tắt Remote Login/VNC.
+  - **Linux**: Hạn chế ptrace scope (`kernel.yama.ptrace_scope = 2`), cấm core dump, UFW Default Deny, cô lập Docker socket (không thêm user vào group `docker`).
+- **Rà soát Shadow Browser Automation & Sandbox Escape**: Quét cache Chromium chạy ngầm của Playwright / Puppeteer (`ms-playwright`), kiểm tra cờ nguy hiểm `--no-sandbox` và rà soát quyền Accessibility (TCC / UI Automation) chống leo thang chiếm quyền điều khiển OS.
+- **Quy trình Main Agent Elevated Re-run**: Bắt buộc Agent sau lượt audit non-elevated phải gom toàn bộ các mục bị chặn bởi `Access denied` để xin phép user chạy 1 lượt elevated duy nhất qua UAC / sudo nhằm khép kín báo cáo đo lường.
+
 ## [1.2.0] — 2026-10-31
 
 ### Thêm & Cải tiến

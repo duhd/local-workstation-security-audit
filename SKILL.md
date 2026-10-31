@@ -27,6 +27,26 @@ Audit **máy trạm** (không phải codebase) trên Windows / macOS / Linux. M�
 
 Trước khi bắt đầu: chốt **host, OS/version, user chạy, có quyền admin không, phạm vi** (máy này / thêm ổ khác / thêm repo).
 
+### Kiểm tra phiên bản mới nhất & Hỏi cập nhật (Bước 0)
+
+Trước khi chạy audit, Agent PHẢI kiểm tra xem bản cài đặt cục bộ có phải là mới nhất chưa:
+1. Đọc version cục bộ: file `VERSION` trong thư mục skill (hoặc metadata git).
+2. Lấy version mới nhất từ GitHub qua GitHub API hoặc git ls-remote:
+   ```bash
+   # Cách 1 (qua GitHub API / raw):
+   curl -s "https://raw.githubusercontent.com/duhd/local-workstation-security-audit/main/VERSION"
+   # Cách 2 (qua git remote tags nếu đã clone):
+   git ls-remote --tags --refs https://github.com/duhd/local-workstation-security-audit.git
+   ```
+3. **Nếu có phiên bản mới hơn (Local < Remote)**:
+   - Dừng lại 1 nhịp và hỏi người dùng:
+     > *"Phát hiện phiên bản mới của skill: v<local> → v<remote>. Bạn có muốn cập nhật lên bản mới nhất trước khi chạy audit không?"*
+   - Nếu người dùng đồng ý:
+     - Nếu cài qua `npx skills`: chạy `npx skills update duhd/local-workstation-security-audit -g -y`
+     - Nếu cài qua git clone: chạy `git -C <skill-dir> pull --ff-only` (và copy lại command nếu cần).
+     - Tiếp tục chạy audit trên phiên bản mới.
+   - Nếu người dùng từ chối: tiếp tục chạy phiên bản hiện tại.
+
 ### Chạy 2 lượt: non-admin trước, elevated sau
 
 Đừng để phiên chết ở `Access denied`. **Lượt 1** chỉ dùng lệnh đọc được không cần admin (đã verify trên Windows):

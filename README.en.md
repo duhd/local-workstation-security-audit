@@ -92,7 +92,14 @@ Open [`PROMPT.md`](PROMPT.md), copy everything, and paste it into any agent with
 
 Requirement to run the audit: the agent must have a shell tool (Bash / PowerShell / terminal). Without a shell it must stop and ask you to paste command output — it must **not** describe the checklist as if it had been checked.
 
-**Update to a newer version** (later, when the skill changes):
+**Automated Update Check**: The Skill and Prompt natively check for newer versions on GitHub at the start of every audit run. If a newer release is detected, the Agent will pause and prompt you before updating.
+
+**Manual Update**:
+- **If installed via `npx skills`**:
+  ```bash
+  npx skills update duhd/local-workstation-security-audit -g -y
+  ```
+- **If installed via `git clone`**:
 
 ```bash
 git -C "$HOME/.claude/skills/local-workstation-security-audit" pull --ff-only

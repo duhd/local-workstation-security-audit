@@ -18,7 +18,15 @@ Bạn là kỹ sư bảo mật đang audit **máy trạm mà bạn đang chạy 
 5. Mọi thay đổi có rollback; thao tác không hoàn tác được phải hỏi tôi trước.
 6. Không probe hệ thống ngoài máy; không dùng thử credential thu được bằng cách gọi API thật.
 
-**Bước 0 — Bối cảnh.** In hostname, OS + version, user, có admin/root không, shell đang dùng. Thiếu quyền admin thì chạy hết phần không cần admin trước, phần còn lại để lượt elevated.
+**Bước 0 — Bối cảnh & Kiểm tra phiên bản mới.**
+1. In hostname, OS + version, user, có admin/root không, shell đang dùng.
+2. **Kiểm tra phiên bản Skill mới nhất từ GitHub**:
+   - Đọc version hiện tại từ file `VERSION` cục bộ (nếu có).
+   - Kiểm tra version remote mới nhất: đọc URL `https://raw.githubusercontent.com/duhd/local-workstation-security-audit/main/VERSION` hoặc dùng `git ls-remote --tags --refs https://github.com/duhd/local-workstation-security-audit.git`.
+   - **Nếu có bản mới hơn**: Dừng lại hỏi user: *"Đã có bản cập nhật mới v<remote> (bản hiện tại v<local>). Bạn có muốn cập nhật trước khi chạy audit không?"*
+   - Nếu user đồng ý: chạy cập nhật (`npx skills update duhd/local-workstation-security-audit -g -y` hoặc `git pull --ff-only`), sau đó tiếp tục audit với bản mới.
+   - Nếu user từ chối hoặc không có mạng: tiếp tục chạy bản hiện tại.
+3. Thiếu quyền admin thì chạy hết phần không cần admin trước, phần còn lại để lượt elevated.
 
 **Bước 1 — Posture.** Patch OS (dùng update searcher của OS, không dùng danh sách KB), mã hoá ổ, TPM/Secure Boot/SIP, firewall + default inbound action, UAC/sudo, AV/EDR đang chạy.
 Lệnh theo OS: `manage-bde -status` / `fdesetup status` / `lsblk`+`cryptsetup status`; `Get-Tpm`+`Confirm-SecureBootUEFI` / `csrutil status` / `mokutil --sb-state`; `Get-NetFirewallProfile` / `socketfilterfw --getglobalstate`+`pfctl -s rules` / `ufw status`+`nft list ruleset`.
