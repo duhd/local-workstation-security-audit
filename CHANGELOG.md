@@ -3,6 +3,13 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.4.0] — 2026-11-01
+
+### Thêm & Cải tiến
+
+- **Bắt buộc dùng Ask Question tool cho Interactive Triage**: Phase 8 của `SKILL.md` và Bước 9 của `PROMPT.md` quy định Agent PHẢI gọi công cụ `ask` / `AskUserQuestion` để hỏi người dùng lựa chọn (Accept / Fix tối thiểu / Fix triệt để) theo giao diện trắc nghiệm tương tác, thay vì dump văn bản hoặc tự suy đoán. Mỗi option bắt buộc nêu lệnh sẽ chạy, hệ quả và rollback.
+- **Cập nhật prompt mẫu trong cả hai bản README (VI/EN)** để hướng người dùng kích hoạt đúng cơ chế Ask Question khi yêu cầu Agent triage sau audit.
+
 ## [1.3.1] — 2026-10-31
 
 ### Sửa lỗi & Cải tiến
