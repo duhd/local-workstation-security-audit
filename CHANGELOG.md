@@ -3,6 +3,12 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.3.1] — 2026-10-31
+
+### Sửa lỗi & Cải tiến
+
+- **Chuẩn hoá lệnh cập nhật `npx skills update`**: Sửa lệnh trong tài liệu và prompt từ `npx skills update duhd/...` sang đúng tên định danh cài đặt `npx skills update local-workstation-security-audit -g -y`, khắc phục lỗi `No installed skills found matching` và crash assertion của Node libuv trên Windows.
+
 ## [1.3.0] — 2026-10-31
 
 ### Thêm & Nâng cấp
