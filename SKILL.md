@@ -72,7 +72,7 @@ OS patch ≠ ứng dụng patch. Máy có thể vá OS đầy đủ nhưng brows
 |---|---|---|---|
 | Gói có bản mới | `winget upgrade --include-unknown` | `brew outdated --greedy` | `apt list --upgradable` / `dnf check-update` / `flatpak remote-ls --updates` |
 | Version browser đang cài | `(Get-Item "$env:ProgramFiles\Google\Chrome\Application\chrome.exe").VersionInfo.ProductVersion`; registry Uninstall keys | `defaults read "/Applications/Google Chrome.app/Contents/Info" CFBundleShortVersionString`; `mdls -name kMDItemVersion` | `google-chrome --version`; `chromium --version`; `firefox --version` |
-| Bản mới nhất | Chrome: `https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1`; Edge: `winget show Microsoft.Edge` | Chrome như trên (platform=mac); Safari theo OS | Chrome: platform=linux; `apt-cache policy <pkg>` |
+| Bản mới nhất | Chrome: `https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1` (đã verify: `platform=Windows`/`Mac`/`Linux`; `Win` trả rỗng); Edge: `winget show Microsoft.Edge` | Chrome: `platform=Mac`; Safari theo OS | Chrome: `platform=Linux`; `apt-cache policy <pkg>` |
 | Remote-access host | `winget list "*Remote Desktop*"`, `Get-Service chromoting`, RustDesk/AnyDesk | `ls /Applications | grep -iE 'anydesk|rustdesk|teamviewer'` | `systemctl status anydesk rustdesk --no-pager` |
 
 Cách đọc: so **installed vs latest stable**. Patch release của browser (ví dụ `X.Y.Z.41` → `X.Y.Z.47`, cùng major) gần như luôn chứa bản vá bảo mật ⇒ lệch ≥1 patch = cần update. Remote-access host lệch **major** version trong khi service đang chạy là finding mức High nếu ổ chưa mã hoá.
@@ -256,3 +256,99 @@ Trước khi bàn giao: grep report cho `sk-`, `ghp_`, `ya29.`, `-----BEGIN`, `\
 - Không in nội dung secret, kể cả "để chứng minh".
 - Không xoá/đổi file của người khác; không force-push branch đã publish mà chưa được duyệt.
 - Không tuyên bố "đã audit xong toàn bộ" — luôn nêu coverage và phần chưa kiểm.
+
+## Phạm vi bổ sung — attacker-first (Phase 10–17)
+
+Phase 1–9 phủ *cấu hình nhìn thấy được*. Phần dưới là những gì kẻ tấn công thật sự dùng trên một máy dev workstation, và thường **bị bỏ sót** vì không nằm trong checklist posture. Chạy sau Phase 9, hoặc chọn theo mục tiêu tấn công.
+
+Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nếu mục này hở", và chỉ ghi *sự tồn tại + quyền*, không in giá trị.
+
+### Phase 10 — Danh tính & vật liệu phiên (ai còn vào được máy này?)
+
+| Kẻ tấn công dùng để | Kiểm | Windows | macOS | Linux |
+|---|---|---|---|---|
+| Duy trì đăng nhập SSH vĩnh viễn | Ai nằm trong `authorized_keys` (kể cả key lạ) | `~/.ssh/authorized_keys`, `authorized_keys2`; `ssh-keygen -lf` từng key (chỉ fingerprint) | `~/.ssh/authorized_keys` | `~/.ssh/authorized_keys`, `/etc/ssh/authorized_keys.d` |
+| Pivot qua SSH config | `ProxyCommand`/`LocalCommand` trỏ binary lạ | `~/.ssh/config` | same | same |
+| Lấy credential đã lưu | Credential Manager + DPAPI blob | `cmdkey /list`; `%APPDATA%\Microsoft\Credentials`, `%LOCALAPPDATA%\Microsoft\Credentials` | Keychain: `security dump-keychain \| grep -c svce` | `secret-tool search --all x y`; `~/.local/share/keyrings` |
+| Đọc secret user từng gõ | Shell history | `(Get-PSReadLineOption).HistorySavePath` → grep pattern token | `~/.zsh_history`, `~/.bash_history` | same |
+| Lấy mật khẩu cleartext lúc boot | Auto-logon | `Winlogon` → `AutoAdminLogon=1`, `DefaultPassword` (**cleartext**) | login items + FileVault auto-login | `getty` autologin, `~/.config/autostart` |
+| Dump credential từ memory | LSA protection / Credential Guard / WDigest | `RunAsPPL`, `LsaCfgFlags`, `UseLogonCredential` | SIP (`csrutil status`) | `kernel.yama.ptrace_scope`, `lockdown` |
+| Dùng lại hash/cache | Cached logons + policy | `CachedLogonsCount`, `net accounts` | `pwpolicy` | `pam_unix`/`faillock`, `/etc/security/pwquality.conf` |
+| Vé Kerberos còn sống | Ticket cache | `klist` | n/a | `klist` |
+
+### Phase 11 — Bề mặt thực thi code & leo thang đặc quyền
+
+| Kẻ tấn công dùng để | Kiểm | Lệnh gợi ý |
+|---|---|---|
+| PATH hijack: thả binary vào dir đứng trước | Thư mục trong `PATH` mà user ghi được | `$env:PATH -split ';'` → `icacls <dir>`; macOS/Linux: `echo $PATH \| tr ':' '\n'` → `ls -ld` |
+| Chạy binary thay cho service | Service path **không** quote + thư mục ghi được | `Get-CimInstance Win32_Service \| ? { $_.PathName -notmatch '^"' }` → kiểm `icacls` từng path |
+| Sửa service config | Service DACL cho user thường `SERVICE_CHANGE_CONFIG` | `sc sdshow <svc>`; `Get-Acl` trên binary |
+| Leo thang bằng token | `SeImpersonate`/`SeDebug`/`SeTakeOwnership` bật cho user thường | `whoami /priv`; Linux `capsh --print`; macOS `sudo -l` |
+| MSI elevation | `AlwaysInstallElevated` | `HKLM/HKCU \...\Installer` → `AlwaysInstallElevated` |
+| Persistence qua git | Hook / include / insteadOf / credential helper lạ | `git config --global --get-regexp '^(core\.hooksPath\|include\.path\|url\.\|credential\.)'`; `ls .git/hooks \| grep -v sample` |
+| Đầu độc package manager | Registry/index URL bị đổi | `.npmrc`, `pip.conf`, `nuget sources`, `go env GOPROXY`, `composer config -g -l` |
+| Thoát WSL/Docker lên host | docker.sock, `--privileged`, interop, sudoers | `docker ps --format '{{.Image}}'`; `/etc/sudoers.d`; `~/.wslconfig`; `ls -l /var/run/docker.sock` |
+| Extension/host bridge | Native messaging host, `update_url` tự host | `HKCU\Software\Google\Chrome\NativeMessagingHosts`; manifest `update_url` |
+| Auto-run task trong workspace | `.vscode/tasks.json` với `runOn: folderOpen` | grep `runOn` trong `.vscode/`; `settings.json` → `terminal.integrated.env` |
+
+### Phase 12 — Secret trong artifact, backup và cloud sync
+
+| Kẻ tấn công dùng để | Kiểm |
+|---|---|
+| Đọc credential từ IaC | `*.tfstate`, `*.tfplan`, `.terraform/`, `terraform.tfvars`, `*.pem` trong repo |
+| Đọc secret từ dump/log | `%LOCALAPPDATA%\CrashDumps`, WER, `*.dmp`, `*.log` chứa `Bearer`/`token=` |
+| Đọc bản nháp editor | `*.swp`, `*~`, VS Code `Backups/`, JetBrains `LocalHistory`, Notepad++ backup |
+| Đọc output notebook/API tool | `*.ipynb` (outputs), Postman collection + environment, Insomnia export, `*.har` |
+| Khôi phục dữ liệu "đã xoá" | Recycle Bin `C:\$Recycle.Bin`; `vssadmin list shadows`; git dangling `git fsck --lost-found`, `git stash list` |
+| Lấy secret qua cloud sync | Thư mục đang sync (OneDrive/Drive/Dropbox) có chứa repo/secret: `Get-ChildItem env: \| ? Name -match 'OneDrive\|Drive'`; macOS `~/Library/CloudStorage`; Linux `~/OneDrive`, `rclone config` |
+| Đọc memory còn trên đĩa | `pagefile.sys`, `hiberfil.sys` — chỉ nguy hiểm khi ổ chưa mã hoá |
+
+### Phase 13 — Kênh tin cậy & certificate store
+
+| Kẻ tấn công dùng để | Kiểm |
+|---|---|
+| MITM toàn bộ TLS | Root CA lạ trong máy: `Get-ChildItem Cert:\LocalMachine\Root` (lọc issuer không phải Microsoft/DigiCert/...); macOS `security find-certificate -a -p /Library/Keychains/System.keychain`; Linux `ls /usr/local/share/ca-certificates` |
+| Chiếm kênh update | Trạng thái updater (`Get-Service gupdate,GoogleUpdaterService*,edgeupdate`) + quyền ghi trên binary updater; `winget source list`; registry npm/pip override |
+| Chặn bằng policy | AppLocker/WDAC có hiệu lực không: `Get-AppLockerPolicy -Effective`; macOS `spctl --status`; Linux SELinux/AppArmor `sestatus`, `aa-status` |
+
+### Phase 14 — Năng lực phát hiện (thứ attacker tắt đầu tiên)
+
+| Kẻ tấn công dùng để | Kiểm |
+|---|---|
+| Chạy lệnh không để lại dấu | Audit policy: `auditpol /get /category:*`; 4688 + `ProcessCreationIncludeCmdLine_Enabled`; 5140/5145; 4663 |
+| Ẩn PowerShell | ScriptBlock (4104), Module, Transcription keys trong `HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell` |
+| Vô hiệu telemetry | Sysmon/ETW/AMSI provider; `Get-Service Sysmon*`; EDR service DACL (ai stop được) |
+| Xoá log | `wevtutil gl Security` (size/retention); event 1102 (log cleared); forwarder **thực sự** nhận log (Splunk/Wazuh agent uptime + queue) |
+
+### Phase 15 — Bề mặt hạ tầng mạng (ngoài listener)
+
+| Kẻ tấn công dùng để | Kiểm |
+|---|---|
+| Lấy PSK Wi-Fi | `netsh wlan show profiles` → `key=clear` (WPA2-PSK đọc được) |
+| Poisoning | LLMNR `EnableMulticast`, NetBIOS `NetbiosOptions`, mDNS responder |
+| NTLM leak khi clone repo | File `.lnk/.url/.scf/.library-ms` trong repo (mở ra → gửi hash); `git ls-files '*.[lL][nN][kK]'` |
+| Kênh phụ | Print Spooler + Point-and-Print, `WebClient`/WebDAV, `Search-ms` handler |
+| Ra ngoài không kiểm soát | Proxy/PAC, DNS, DoH bật/tắt, VPN split tunnel, egress tới host lạ |
+
+### Phase 16 — Vật lý & pre-boot (chỉ cần chạm máy một lần)
+
+`AutoAdminLogon` + `DefaultPassword` · thời gian khoá màn hình (`InactivityTimeoutSecs`) · yêu cầu mật khẩu khi wake · thứ tự boot & USB boot · BIOS/UEFI password · DMA/Thunderbolt protection · hibernation + Fast Startup (memory xuống đĩa) · BitLocker recovery escrow.
+
+### Phase 17 — Bề mặt AI agent / tool tự động (đặc thù máy dev hiện nay)
+
+| Kẻ tấn công dùng để | Kiểm |
+|---|---|
+| Thực thi binary qua MCP | Mọi entry `command` trong `.mcp.json`/`mcp.json` (đường dẫn có ghi được không), `env` chứa token |
+| Persistence qua hook agent | `PreToolUse`/`PostToolUse`/shell hooks trỏ script lạ; `~/.<agent>/settings.json` |
+| Bỏ qua phê duyệt | `approvalMode`/`permissions` (yolo/danger-full-access), allow-list cho bash/eval/browser |
+| Đọc secret từ transcript | Session DB, `blobs/`, `custom-session-files/`, fact-board — nội dung user dán vào |
+| Daemon loopback không auth | CDP (`DevToolsActivePort`), orchestrator/agent daemon cục bộ, MCP HTTP server — bất kỳ process local nào cũng gọi được |
+| Tự chạy khi login | Agent daemon/PWA autostart |
+
+**Cách dùng mục này trong report**: ghi rõ mục nào **đã chạy**, mục nào **chưa chạy**. Một danh sách scope không thay thế phép đo — nếu chưa đo thì ghi "chưa kiểm", không ghi "không có".
+
+**Lệnh cần quyền cao (thuộc lượt elevated, đừng chạy ở lượt 1)**: `vssadmin list shadows`, `auditpol /get /category:*`, `sc sdshow <svc>`, `Get-AppLockerPolicy -Effective`, `wevtutil gl <log>`, `Get-CimInstance Win32_Service` khi cần `PathName` đầy đủ của service chạy SYSTEM. Nếu nhận `Access is denied` ⇒ ghi "chưa kiểm (cần elevated)", **không** kết luận "không có shadow copy / không có audit policy".
+
+**Thứ tự chạy đề xuất** (khác thứ tự đánh số, theo blast radius thực tế của một máy dev): **17 → 10 → 12 → 11 → 14 → 13 → 15 → 16**. Lý do: daemon/agent config sai cho phép thực thi không phê duyệt; `authorized_keys` + credential đã lưu là đường vào không cần password; secret trong artifact/tfstate/dump thường đã rời máy; phần còn lại là persistence và phát hiện.
+
+**Ranh giới**: chỉ liệt kê bề mặt và lệnh kiểm read-only. Không đưa payload, không PoC leo thang, không chạy thử privesc trên máy thật — nếu cần chứng minh, dùng VM cô lập.

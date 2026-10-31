@@ -1,6 +1,8 @@
-Chạy audit bảo mật máy trạm theo skill `.claude/skills/local-workstation-security-audit/SKILL.md`.
+Chạy audit bảo mật máy trạm theo skill `SKILL.md` trong repo này (hoặc bản đã copy vào thư mục skill của harness).
 
-Đọc toàn bộ SKILL.md rồi thực hiện tuần tự **Phase 1 → Phase 9**. Luật cứng: read-only mặc định · không in secret (redact trong pipeline) · mỗi phép đo có positive control (filter hẹp = false negative) · phân biệt "đã kiểm sạch" với "chưa kiểm được" · verify bằng state chứ không bằng exit code · đo lại sau mỗi thay đổi · mọi thay đổi có rollback và chỉ thực thi sau khi user chọn phương án cho từng finding.
+Đọc toàn bộ `SKILL.md` rồi thực hiện tuần tự **Phase 1 → Phase 9** (posture), sau đó **Phase 10 → 17** (attacker-first: danh tính/credential, thực thi code & leo thang, secret trong artifact, kênh tin cậy, năng lực phát hiện, mạng ngoài listener, vật lý/pre-boot, bề mặt AI agent). Không bỏ phase nào; mục không kiểm được thì ghi "chưa kiểm" kèm lý do.
+
+Luật cứng: read-only mặc định · không in secret (redact trong pipeline) · mỗi phép đo có positive control (filter hẹp = false negative) · phân biệt "đã kiểm sạch" với "chưa kiểm được" · verify bằng state chứ không bằng exit code · đo lại sau mỗi thay đổi · mọi thay đổi có rollback và chỉ thực thi sau khi user chọn phương án cho từng finding.
 
 Thứ tự remediation khi có nhiều lớp: revoke credential → siết quyền/ACL → rewrite lịch sử/tắt service.
 

@@ -20,8 +20,9 @@ Bạn là kỹ sư bảo mật đang audit **máy trạm mà bạn đang chạy 
 
 **Bước 0 — Bối cảnh.** In hostname, OS + version, user, có admin/root không, shell đang dùng. Thiếu quyền admin thì chạy hết phần không cần admin trước, phần còn lại để lượt elevated.
 
-**Bước 1 — Posture.** Patch (dùng update searcher của OS, không dùng danh sách KB), mã hoá ổ, TPM/Secure Boot/SIP, firewall + default inbound action, UAC/sudo, AV/EDR đang chạy.
+**Bước 1 — Posture.** Patch OS (dùng update searcher của OS, không dùng danh sách KB), mã hoá ổ, TPM/Secure Boot/SIP, firewall + default inbound action, UAC/sudo, AV/EDR đang chạy.
 Lệnh theo OS: `manage-bde -status` / `fdesetup status` / `lsblk`+`cryptsetup status`; `Get-Tpm`+`Confirm-SecureBootUEFI` / `csrutil status` / `mokutil --sb-state`; `Get-NetFirewallProfile` / `socketfilterfw --getglobalstate`+`pfctl -s rules` / `ufw status`+`nft list ruleset`.
+**Và patch gap của ứng dụng — đừng nhầm với patch OS:** `winget upgrade --include-unknown` / `brew outdated --greedy` / `apt list --upgradable`; lấy version browser đang cài (`chrome.exe` VersionInfo / `defaults read` / `google-chrome --version`) so với latest stable (Chrome: `chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows|Mac|Linux&num=1` — đã verify 3 giá trị này, `Win` trả rỗng; Edge: `winget show Microsoft.Edge`; Safari: theo OS); liệt kê remote-access host (Chrome Remote Desktop `chromoting`, AnyDesk, RustDesk) — lệch **major** version trong khi service đang chạy là finding ưu tiên cao. Ghi rõ **patch gap ≠ CVE mapping**: nếu chưa đối chiếu NVD/MSRC thì kết luận là "lệch bản mới nhất, mức khai thác chưa xác định", không viết như vulnerability scan. Nếu nguồn "latest" trả rỗng/không parse được thì ghi "chưa xác định", không suy ra "đã cập nhật".
 
 **Bước 2 — Bí mật trên đĩa.** Vị trí + quyền của: git credential (file, helper, credential nhúng trong URL), cloud/registry config, kubeconfig, SSH key (**kiểm passphrase bằng `ssh-keygen -y -P "" -f`**), dotfile agent/harness, credential store của OS (`security find-generic-password` / `secret-tool`). Quyền: `icacls` / `namei -l`+`stat` / `getfacl` — **không** dùng `ls -la` khi chạy trên Windows qua MSYS.
 
@@ -44,3 +45,16 @@ Sau mỗi thay đổi, **đo lại bằng đúng phép đo đã dùng để phá
 **Bẫy phải tránh (đã cắn thật):** filter hẹp ⇒ false negative · `Get-NetFirewallRule` trả cả rule disabled · `ls -la` trên Windows qua MSYS báo sai ACL · output bị tool redact làm tưởng file chứa `[REDACTED]` · tắt service không đóng port · "không có event log" ≠ "không có telemetry" (Splunk/Wazuh/ManageEngine) · service provisioner bật lại account · cmdlet BitLocker mỗi lần chỉ nhận một protector và **in recovery password ra console** · escrow có thể bị GPO chặn · `-UsedSpaceOnly` để free space plaintext · DENY thắng inherited nhưng chủ sở hữu vẫn đọc được · credential trong file **tracked** thì sửa working tree là không đủ · `git config --get-regexp 'remote.*'` in token.
 
 Bắt đầu bằng Bước 0, chạy tuần tự, không bỏ bước nào. Mục không kiểm được → ghi vào *giới hạn coverage*, không suy đoán.
+
+**Bước bổ sung — phạm vi attacker-first (chạy sau Bước 8, trước khi chốt report).** Bước 1–8 phủ cấu hình nhìn thấy được; phần dưới là thứ kẻ tấn công thật sự dùng và thường bị bỏ sót. Checklist chi tiết + lệnh 3 OS nằm ở mục *Phạm vi bổ sung — attacker-first (Phase 10–17)* trong `SKILL.md`:
+
+1. **Danh tính**: ai còn trong `authorized_keys`; Credential Manager/Keychain/`secret-tool`; shell history (grep pattern token, không in giá trị); `AutoAdminLogon` + `DefaultPassword` (cleartext); LSA protection / Credential Guard / ptrace_scope; cached logons.
+2. **Thực thi code & leo thang**: thư mục trong `PATH` mà user ghi được; service path không quote + binary ghi được; service DACL; `whoami /priv`; `AlwaysInstallElevated`; git hook/`include.path`/`insteadOf`/`credential.helper` lạ; registry npm/pip/nuget; WSL `docker.sock` + `--privileged` + sudoers; extension `update_url`/native messaging; `.vscode/tasks.json` `runOn`.
+3. **Secret trong artifact**: `*.tfstate`/`*.tfplan`/`terraform.tfvars`; crash dump (`%LOCALAPPDATA%\CrashDumps`); editor swap/backup + JetBrains `LocalHistory`; notebook outputs; Postman/Insomnia/`.har`; Recycle Bin; `vssadmin list shadows`; `git fsck --lost-found` + `git stash`; **thư mục đang sync OneDrive/Drive**; `pagefile.sys`/`hiberfil.sys`.
+4. **Kênh tin cậy**: root CA lạ trong machine store; trạng thái + quyền ghi của updater; `winget source list`; AppLocker/WDAC/SELinux/AppArmor.
+5. **Năng lực phát hiện**: audit policy (4688 + command line, 5140/5145, 4663); PowerShell ScriptBlock/Transcription; Sysmon/AMSI/ETW; log size + event 1102; forwarder có thật sự nhận log.
+6. **Mạng ngoài listener**: `netsh wlan show profiles` + `key=clear`; LLMNR/NetBIOS/mDNS; file `.lnk/.url/.scf` trong repo (NTLM leak); Print Spooler/WebClient/`Search-ms`; proxy/PAC/DoH/split tunnel.
+7. **Vật lý/pre-boot**: khoá màn hình + yêu cầu mật khẩu khi wake; boot order/USB boot; BIOS password; hibernation + Fast Startup; escrow recovery key.
+8. **AI agent surface**: mọi `command` trong `.mcp.json` (chạy binary gì, đường dẫn có ghi được); hook agent (`PreToolUse`…); `approvalMode`/allow-list; transcript + agent DB (secret user dán vào); daemon loopback không auth (CDP, orchestrator); autostart của agent.
+
+Mỗi mục: nếu **chưa đo** thì ghi "chưa kiểm", tuyệt đối không ghi "không có".
