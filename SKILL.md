@@ -83,7 +83,7 @@ Giới hạn phải nêu rõ trong report: **patch gap ≠ CVE mapping**. Muốn
 
 | Nguồn | Windows | macOS / Linux |
 |---|---|---|
-| Git credential | `%USERPROFILE%\.git-credentials`; `git config --show-origin --get-all credential.helper` | `~/.git-credentials`, `~/.config/git/credentials`; macOS `security find-internet-password -s <host>`; Linux `secret-tool search` |
+| Git credential | `%USERPROFILE%\.git-credentials`; `git config --show-origin --get-all credential.helper` | `~/.git-credentials`, `~/.config/git/credentials`; macOS `security dump-keychain \| grep -c svce` (**chỉ đếm**, không `-w`/`-g` vì sẽ in mật khẩu); Linux `secret-tool search` (chỉ đếm kết quả) |
 | Cloud/registry | `.aws\credentials`, `.docker\config.json`, `.kube\config`, `.config\gh\hosts.yml` | same paths in `~`; `security find-generic-password` / `secret-tool` |
 | Agent/harness | `%USERPROFILE%\.<tool>\**`, `%APPDATA%\<tool>` | `~/.<tool>/**`, `~/Library/Application Support/<tool>` |
 | SSH | `~/.ssh/*` | `~/.ssh/*`, `~/.gnupg` |
@@ -274,7 +274,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 | Lấy mật khẩu cleartext lúc boot | Auto-logon | `Winlogon` → `AutoAdminLogon=1`, `DefaultPassword` (**cleartext**) | login items + FileVault auto-login | `getty` autologin, `~/.config/autostart` |
 | Dump credential từ memory | LSA protection / Credential Guard / WDigest | `RunAsPPL`, `LsaCfgFlags`, `UseLogonCredential` | SIP (`csrutil status`) | `kernel.yama.ptrace_scope`, `lockdown` |
 | Dùng lại hash/cache | Cached logons + policy | `CachedLogonsCount`, `net accounts` | `pwpolicy` | `pam_unix`/`faillock`, `/etc/security/pwquality.conf` |
-| Vé Kerberos còn sống | Ticket cache | `klist` | n/a | `klist` |
+| Vé Kerberos còn sống | Ticket cache — **chỉ đếm**, không in nội dung vé | `klist \| Select-String "Ticket"` (hoặc `klist \| find /c "Ticket"`) | n/a | `klist` (chỉ đếm dòng) |
 
 ### Phase 11 — Bề mặt thực thi code & leo thang đặc quyền
 
@@ -324,7 +324,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 
 | Kẻ tấn công dùng để | Kiểm |
 |---|---|
-| Lấy PSK Wi-Fi | `netsh wlan show profiles` → `key=clear` (WPA2-PSK đọc được) |
+| PSK Wi-Fi đọc được | `netsh wlan show profiles` (chỉ tên profile) → với profile `WPA2-Personal` thì PSK đọc được; **không** thêm tham số in PSK, chỉ ghi "profile X dùng WPA2-Personal ⇒ PSK đọc được" |
 | Poisoning | LLMNR `EnableMulticast`, NetBIOS `NetbiosOptions`, mDNS responder |
 | NTLM leak khi clone repo | File `.lnk/.url/.scf/.library-ms` trong repo (mở ra → gửi hash); `git ls-files '*.[lL][nN][kK]'` |
 | Kênh phụ | Print Spooler + Point-and-Print, `WebClient`/WebDAV, `Search-ms` handler |

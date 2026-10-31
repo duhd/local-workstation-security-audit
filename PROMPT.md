@@ -53,7 +53,7 @@ Bắt đầu bằng Bước 0, chạy tuần tự, không bỏ bước nào. M�
 3. **Secret trong artifact**: `*.tfstate`/`*.tfplan`/`terraform.tfvars`; crash dump (`%LOCALAPPDATA%\CrashDumps`); editor swap/backup + JetBrains `LocalHistory`; notebook outputs; Postman/Insomnia/`.har`; Recycle Bin; `vssadmin list shadows`; `git fsck --lost-found` + `git stash`; **thư mục đang sync OneDrive/Drive**; `pagefile.sys`/`hiberfil.sys`.
 4. **Kênh tin cậy**: root CA lạ trong machine store; trạng thái + quyền ghi của updater; `winget source list`; AppLocker/WDAC/SELinux/AppArmor.
 5. **Năng lực phát hiện**: audit policy (4688 + command line, 5140/5145, 4663); PowerShell ScriptBlock/Transcription; Sysmon/AMSI/ETW; log size + event 1102; forwarder có thật sự nhận log.
-6. **Mạng ngoài listener**: `netsh wlan show profiles` + `key=clear`; LLMNR/NetBIOS/mDNS; file `.lnk/.url/.scf` trong repo (NTLM leak); Print Spooler/WebClient/`Search-ms`; proxy/PAC/DoH/split tunnel.
+6. **Mạng ngoài listener**: `netsh wlan show profiles` (chỉ tên + auth type; profile `WPA2-Personal` nghĩa là PSK đọc được — chỉ ghi nhận, **không** trích xuất); LLMNR/NetBIOS/mDNS; file `.lnk/.url/.scf` trong repo (NTLM leak); Print Spooler/WebClient/`Search-ms`; proxy/PAC/DoH/split tunnel.
 7. **Vật lý/pre-boot**: khoá màn hình + yêu cầu mật khẩu khi wake; boot order/USB boot; BIOS password; hibernation + Fast Startup; escrow recovery key.
 8. **AI agent surface**: mọi `command` trong `.mcp.json` (chạy binary gì, đường dẫn có ghi được); hook agent (`PreToolUse`…); `approvalMode`/allow-list; transcript + agent DB (secret user dán vào); daemon loopback không auth (CDP, orchestrator); autostart của agent.
 
