@@ -135,6 +135,22 @@ Và một điều luôn đúng: **một danh sách phạm vi không thay thế p
 
 ---
 
+## Phiên bản & phát hành
+
+- Version hiện tại: xem file [`VERSION`](VERSION) — dạng SemVer.
+- Lịch sử thay đổi: [`CHANGELOG.md`](CHANGELOG.md).
+- Mỗi bản phát hành là một git tag `vX.Y.Z` + GitHub Release cùng nội dung changelog.
+
+Quy trình phát hành (thủ công, không cần CI):
+
+```bash
+# 1) sửa nội dung, cập nhật CHANGELOG.md + VERSION
+git commit -am "feat: <mô tả>"
+git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin main --tags
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG.md
+```
+
 ## License
 
 Chưa cấp license. Nội dung dùng nội bộ; muốn dùng lại hoặc phân phối, liên hệ tác giả. Nếu bạn muốn mở hoàn toàn, thêm file `LICENSE` (MIT/Apache-2.0/CC-BY-4.0) — quyết định đó thuộc về chủ repo.

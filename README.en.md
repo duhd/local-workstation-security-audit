@@ -135,6 +135,22 @@ One rule always holds: **a scope list is not a measurement.** Anything not measu
 
 ---
 
+## Version & releases
+
+- Current version: see [`VERSION`](VERSION) — SemVer.
+- Change history: [`CHANGELOG.md`](CHANGELOG.md).
+- Each release is a `vX.Y.Z` git tag plus a GitHub Release carrying the same changelog.
+
+Release process (manual, no CI required):
+
+```bash
+# 1) make changes, update CHANGELOG.md and VERSION
+git commit -am "feat: <what changed>"
+git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin main --tags
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG.md
+```
+
 ## License
 
 No license granted. Internal use; contact the author before reuse or redistribution. If you want it fully open, add a `LICENSE` file (MIT / Apache-2.0 / CC-BY-4.0) — that decision belongs to the repo owner.
