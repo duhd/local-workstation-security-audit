@@ -3,6 +3,15 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.1.0] — 2026-10-31
+
+### Thêm
+
+- **Cài đặt Universal qua `npx skills add`**: Hỗ trợ 1-liner cài đặt tự động cho hơn 20 agent harnesses (`npx skills add duhd/local-workstation-security-audit -g -y`).
+- **Quy định bắt buộc Scan CVE (Mandatory CVE Scanning)** trong nguyên tắc bất biến #9 của skill và các chế độ audit.
+- **Hướng dẫn chi tiết đa nền tảng**: Bổ sung hướng dẫn cài đặt & tích hợp riêng cho Claude Code, Oh My Pi (omp), OpenAI Codex CLI, Cursor/Windsurf (MDC rules), và Claude Desktop (Terminal MCP).
+- **Bổ sung pipeline Grype chuẩn**: Hoàn thiện hướng dẫn catalog package (SBOM-lite), match có version constraint, enrich qua EPSS/KEV và chính sách VEX có thời hạn.
+
 ## [1.0.0] — 2026-10-31
 
 Bản phát hành đầu tiên.
