@@ -1,6 +1,6 @@
 ---
 name: local-workstation-security-audit
-description: Use when auditing a personal workstation (Windows/macOS/Linux) for security posture — disk encryption, credential at rest, network exposure, persistence, browser, repos. Read-only by default; every finding needs Evidence/Fix/Verify/Rollback and never prints secrets.
+description: Use when auditing a personal workstation (Windows/macOS/Linux) for security posture and CVE vulnerabilities — disk encryption, credential at rest, network exposure, persistence, browser, installed software CVEs (NVD/MSRC/EPSS/Grype model), repos. Read-only by default; every finding needs Evidence/Fix/Verify/Rollback and never prints secrets.
 ---
 
 # Local Workstation Security Audit
@@ -17,13 +17,13 @@ Audit **máy trạm** (không phải codebase) trên Windows / macOS / Linux. M�
 6. **Đo lại sau khi sửa.** Hệ thống khác có thể revert hoặc thay đổi không đạt mục tiêu (xem *Đo lại sau khi áp dụng*).
 7. **Sửa gì cũng phải có rollback**, ưu tiên thay đổi nhỏ nhất tại điểm quyết định cuối.
 8. **Đổi gì trên máy thì đồng bộ vào SSOT** nếu thay đổi được quản lý bằng IaC/GPO.
-
+9. **Bắt buộc Scan CVE (Mandatory CVE Scanning)**: Full audit không được dừng ở patch-gap hay version check. Bắt buộc đối chiếu phiên bản cài đặt của OS, Browser, Remote-Access host, và phần mềm rủi ro cao với cơ sở dữ liệu lỗ hổng (NVD, MSRC, CISA KEV, EPSS) theo mô hình Grype pipeline (catalog → match → enrich → policy → report).
 ## Chế độ chạy
 
 | Chế độ | Khi nào | Việc phải làm |
 |---|---|---|
 | **Guidance** | Hỏi một câu bảo mật, review một mục, triage | Chỉ dùng phần liên quan; không tạo report |
-| **Full audit** | "đánh giá bảo mật máy", "audit toàn bộ" | Chạy đủ Phase 1→9, ghi report |
+| **Full audit** | "đánh giá bảo mật máy", "audit toàn bộ" | Chạy đủ Phase 1→9 (bắt buộc kèm scan CVE phần mềm & browser), ghi report |
 
 Trước khi bắt đầu: chốt **host, OS/version, user chạy, có quyền admin không, phạm vi** (máy này / thêm ổ khác / thêm repo).
 
