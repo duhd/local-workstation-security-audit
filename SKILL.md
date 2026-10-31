@@ -327,15 +327,25 @@ Không gán mức cho mục **chưa kiểm được**. Nếu chưa chứng minh 
 
 ## Phase 8 — Remediation (theo quyết định của user)
 
-Với **từng** finding, Agent BẮT BUỘC phải dùng cơ chế **Ask User Question tool** (`ask` / `AskUserQuestion`) để tạo giao diện tương tác trực tiếp cho người dùng lựa chọn (không được dump văn bản rồi tự suy đoán).
+Với **từng** finding, Agent PHẢI đưa người dùng vào một giao diện lựa chọn tường minh — không được tự suy đoán phương án. Có **hai nhánh**, chọn theo tool thực có trong harness đang chạy:
 
-Quy cách gọi `ask`:
+**Nhánh A — Harness có Ask Question tool** (`ask` / `AskUserQuestion`): BẮT BUỘC gọi tool đó.
 - **Batch hoặc tuần tự từng finding**: 1 câu hỏi tương ứng 1 finding (từ P0, P1 đến P3).
 - **Các options chuẩn bắt buộc cung cấp**:
   1. `Accept`: Chấp nhận rủi ro (kèm phân tích hệ quả).
   2. `Fix tối thiểu`: Sửa bề mặt trực tiếp, ít rủi ro phá vỡ chức năng.
   3. `Fix triệt để`: Đóng triệt để rủi ro (kèm cảnh báo tác động phá chức năng nếu có).
 - Mỗi option phải có `description` nêu rõ: lệnh sẽ chạy, hệ quả, rollback.
+
+**Nhánh B — Harness không có tool đó** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, hoặc bất kỳ client chỉ chat thuần): trình bày menu **đánh số** cho từng finding và dừng chờ người dùng trả lời rõ ràng (số hoặc tên phương án):
+```text
+[P1] <tên finding>
+  1) Accept        — <hệ quả của việc không sửa>
+  2) Fix tối thiểu — <lệnh> | tác động: <...> | rollback: <...>
+  3) Fix triệt để  — <lệnh> | tác động: <...> | rollback: <...>
+Chọn 1 / 2 / 3 (hoặc "bỏ qua" để sang finding tiếp theo):
+```
+Không được tự chọn thay người dùng ở cả hai nhánh. Nếu chạy non-interactive (CI, batch, cron) → dừng ở chế độ **read-only report** và ghi rõ "chưa áp dụng remediation: không có kênh xác nhận".
 
 ### Thứ tự bắt buộc khi nhiều lớp
 

@@ -184,9 +184,14 @@ Report `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md`:
 
 Report chứa IP, hostname, đường dẫn nội bộ ⇒ **coi là tài liệu nội bộ**, đừng commit vào repo công khai.
 
-### Tương tác sau Audit qua Ask Question (`ask` / `AskUserQuestion`)
+### Tương tác sau Audit: Ask Question tool hoặc menu đánh số
 
-Sau khi hoàn tất audit và xuất report, **không nên tự ý sửa thủ công hay để Agent tự động sửa toàn bộ**. Bạn hãy dùng prompt mẫu sau để yêu cầu Agent kích hoạt giao diện Ask Question để lựa chọn phương án cho từng finding:
+Sau khi hoàn tất audit và xuất report, **không nên tự ý sửa thủ công hay để Agent tự động sửa toàn bộ**. Cơ chế lựa chọn phụ thuộc harness đang chạy:
+
+- **Harness có Ask Question tool** (Claude Code, Oh My Pi, …): Agent bắt buộc gọi `ask` / `AskUserQuestion` để bạn chọn từ hộp thoại.
+- **Harness không có tool đó** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, chat thuần): Agent in menu đánh số `1) Accept · 2) Fix tối thiểu · 3) Fix triệt để` và dừng chờ bạn trả lời.
+
+Dùng prompt mẫu sau để yêu cầu Agent triage:
 
 ```markdown
 "Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và sử dụng công cụ Ask Question (hoặc cơ chế hỏi trắc nghiệm tương tác) để lần lượt hỏi tôi về từng finding (từ P0, P1 đến P3). Với mỗi finding, hãy cung cấp rõ các options:

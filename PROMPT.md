@@ -57,10 +57,11 @@ Lệnh theo OS: `manage-bde -status` / `fdesetup status` / `lsblk`+`cryptsetup s
 7. **Mục cuối cùng bắt buộc đính kèm đoạn prompt mẫu "Hướng dẫn tiếp theo: Chạy Interactive Remediation Triage"** để user có thể dán tiếp cho phiên sau.
 Report chứa topology/IP/path nội bộ ⇒ coi là tài liệu nội bộ, không push remote công khai. Trước khi bàn giao grep report cho `sk-`, `ghp_`, `ya29.`, `-----BEGIN`, `\d{6}(-\d{6}){7}`, `://[^/]+:[^/]+@` và redact.
 
-**Bước 9 — Tương tác hỏi từng finding qua Ask Question tool (`ask` / `AskUserQuestion`).**
-- BẮT BUỘC sử dụng cơ chế **Ask Question tool** (hộp thoại/giao diện trắc nghiệm tương tác) để hỏi user từng finding (từ P0, P1 đến P3). Không dump chữ chay.
-- Cung cấp rõ ràng các options chuẩn: `Accept`, `Fix tối thiểu`, `Fix triệt để`. Mỗi option nêu cụ thể: lệnh sẽ chạy, hệ quả, rollback.
-- Chỉ chạy lệnh sửa khi user đã bấm chọn phương án.
+**Bước 9 — Tương tác chọn phương án cho từng finding (Ask Question tool hoặc menu đánh số).**
+- Hỏi user từng finding (từ P0, P1 đến P3) qua giao diện lựa chọn tường minh; không tự suy đoán phương án.
+- **Nếu harness có Ask Question tool** (`ask` / `AskUserQuestion` — Claude Code, Oh My Pi, …): BẮT BUỘC gọi tool đó.
+- **Nếu harness không có tool đó** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, chat thuần): in menu đánh số `1) Accept  2) Fix tối thiểu  3) Fix triệt để`, mỗi mục kèm lệnh / hệ quả / rollback, rồi **dừng** chờ user trả lời rõ ràng.
+- Chỉ chạy lệnh sửa khi user đã chọn phương án. Non-interactive (CI/batch/cron) → dừng ở chế độ read-only report, ghi rõ "chưa áp dụng remediation: không có kênh xác nhận".
 - **Đề xuất Hardening chủ động (Customized theo đúng OS máy trạm)**: Ngoài sửa lỗi, hãy căn cứ vào OS của máy (Windows/macOS/Linux) để gợi ý bộ thiết lập phòng ngừa theo bảng *Proactive Baseline Hardening* trong `SKILL.md` (RunAsPPL/ASR trên Windows; SIP/destroyfvkeyonstandby trên macOS; ptrace_scope/UFW/Docker socket isolation trên Linux).
 Thứ tự khi có nhiều lớp: **(1) revoke credential → (2) siết quyền/ACL → (3) rewrite lịch sử / tắt service**.
 Sau mỗi thay đổi, **đo lại bằng đúng phép đo đã dùng để phát hiện** và ghi trước/sau — vì: tắt service có thể không đóng port (kernel giữ); deny ACL chỉ áp handle mới (phải restart process); provisioner service có thể tạo lại account đã disable; `UsedSpaceOnly` báo 100% nhưng free space vẫn plaintext.

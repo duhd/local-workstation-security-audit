@@ -183,9 +183,14 @@ A report at `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md`:
 
 The report contains IPs, hostnames and internal paths ⇒ **treat it as internal**, never commit it to a public repo.
 
-### Post-Audit Interactive Triage via Ask Question Tool
+### Post-Audit Interactive Triage: Ask Question Tool or Numbered Menu
 
-Once the audit is completed and the report is generated, **do not manually guess fixes or let the agent blindly mutate your system**. Paste this prompt to have the agent trigger the interactive Ask Question tool:
+Once the audit is completed and the report is generated, **do not manually guess fixes or let the agent blindly mutate your system**. The selection mechanism depends on the harness you run:
+
+- **Harness with an Ask Question tool** (Claude Code, Oh My Pi, …): the agent must call `ask` / `AskUserQuestion` so you pick from an interactive dialog.
+- **Harness without one** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, plain chat): the agent prints a numbered menu `1) Accept · 2) Minimal fix · 3) Full fix` and waits for your explicit reply.
+
+Paste this prompt to have the agent triage finding-by-finding:
 
 ```markdown
 "Based on the completed audit report, act as a senior system security engineer and use the Ask Question tool (or interactive selection UI) to walk me through each finding one-by-one (from P0, P1 down to P3). For each finding, provide clear options:

@@ -3,6 +3,12 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.4.1] — 2026-11-01
+
+### Sửa lỗi
+
+- **Ask Question tool là điều kiện, không phải luật tuyệt đối**: v1.4.0 cấm "dump văn bản" và bắt buộc gọi `ask` / `AskUserQuestion`, nhưng skill được cài cho hơn 20 harness (`~/.agents/skills/`) — Codex CLI, Cursor, Windsurf, Cline, Claude Desktop không có tool này, khiến Agent rơi vào thế phải vi phạm luật. Phase 8 của `SKILL.md` và Bước 9 của `PROMPT.md` nay tách thành 2 nhánh: **A** gọi Ask Question tool khi harness có; **B** in menu đánh số `Accept / Fix tối thiểu / Fix triệt để` và dừng chờ user trả lời khi harness không có. Chạy non-interactive (CI/batch/cron) → dừng ở chế độ read-only report, không tự áp dụng remediation.
+
 ## [1.4.0] — 2026-11-01
 
 ### Thêm & Cải tiến
