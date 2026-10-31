@@ -9,7 +9,7 @@ Không phải lý thuyết. Trên một máy dev bình thường có thể đồ
 - bạn mất máy, hoặc ai đó boot bằng USB;
 - một agent AI chạy lệnh trong repo đó mà không cần phê duyệt.
 
-Gần đây nhất, các vụ nhắm vào sàn giao dịch tiền mã hoá với thiệt hại được báo cáo lên tới hàng tỷ USD đều đi đúng con đường này: **một endpoint bị chiếm → credential hợp lệ trên máy đó → hệ thống live**. Vụ LastPass 2022 là ví dụ gọn nhất để kiểm chứng: kẻ tấn công vào máy cá nhân của một kỹ sư DevOps, rồi lấy được vault.
+Các vụ mất tiền mã hoá quy mô lớn gần đây đều đi đúng con đường này: **một endpoint bị chiếm → credential hợp lệ trên máy đó → hệ thống live**. Vụ LastPass 2022 là ví dụ gọn nhất và kiểm chứng được: kẻ tấn công vào máy cá nhân của một kỹ sư DevOps, rồi lấy được vault.
 
 Repo này là checklist thực thi cho bước "kiểm tra endpoint" đó — chạy trên Windows, macOS và Linux.
 
@@ -17,20 +17,45 @@ Repo này là checklist thực thi cho bước "kiểm tra endpoint" đó — ch
 
 ## Cài trong 60 giây
 
-**Cách 1 — có skill loader** (harness đọc thư mục skill):
+**Cách 1 — harness có skill loader** (macOS / Linux / Git Bash):
 
 ```bash
+mkdir -p "$HOME/.claude/skills"
 git clone https://github.com/duhd/local-workstation-security-audit \
   "$HOME/.claude/skills/local-workstation-security-audit"
-# rồi gọi:
+# kiểm tra rồi gọi:
+test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" && echo OK
 /local-pc-security-audit
 ```
 
-**Cách 2 — không có skill loader**: mở `PROMPT.md`, dán toàn bộ nội dung vào agent.
+**Cách 1b — Windows PowerShell:**
+
+```powershell
+git clone https://github.com/duhd/local-workstation-security-audit `
+  "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
+Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKILL.md"
+```
+
+> Thay `.claude/skills` bằng thư mục skill của harness bạn dùng — layout này chỉ là ví dụ. Nếu harness không có khái niệm thư mục skill, dùng Cách 2.
+
+**Cách 2 — không có skill loader:** mở `PROMPT.md`, dán toàn bộ nội dung vào agent.
 
 **Điều kiện duy nhất:** agent phải có tool shell (Bash / PowerShell / terminal). Không có shell thì nó phải dừng và yêu cầu bạn dán output — **không** được mô tả lại checklist như thể đã kiểm.
 
-> **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md`, chạy Phase 1 → 9 (posture) rồi Phase 10 → 17 (attacker-first). Read-only mặc định. Không in secret. Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
+> **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md`, chạy Phase 1 → 9 (posture) rồi Phase 10 → 17 (attacker-first). Read-only mặc định. Không in secret. Nếu chỉ có thời gian cho một lượt, đi theo thứ tự ưu tiên trong `SKILL.md` (**17 → 10 → 12 → 11 → 14 → 13 → 15 → 16**). Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
+
+---
+
+## Repo có gì
+
+| File | Vai trò |
+|---|---|
+| `README.md` | Bản giới thiệu tiếng Việt (file này) |
+| `README.en.md` | Bản giới thiệu tiếng Anh |
+| `SKILL.md` | Skill đầy đủ — luật bằng chứng, bảng lệnh 3 OS, neo mức độ, playbook remediation, bảng bẫy đã cắn thật, và **Phase 10–17** (attacker-first) |
+| `PROMPT.md` | Prompt dán thẳng vào agent, không cần skill loader |
+| `commands/local-pc-security-audit.md` | Entry point dạng slash command |
+| `.gitattributes` | Chuẩn hoá LF để dùng được trên macOS/Linux |
 
 ---
 
@@ -38,7 +63,7 @@ git clone https://github.com/duhd/local-workstation-security-audit \
 
 **Phase 1–9 — posture.** Patch OS (bằng update searcher, không bằng danh sách KB) · mã hoá ổ · TPM/Secure Boot/SIP · firewall + listener + ACL mạng overlay · credential at-rest · persistence · browser profile + extension + remote-access host · repo & lịch sử git · patch gap ứng dụng · severity · remediation · report.
 
-**Phase 10–17 — attacker-first.** Đây là phần thường bị bỏ sót, vì nó không nằm trong checklist CIS nào:
+**Phase 10–17 — attacker-first.** Phần thường bị bỏ sót, vì nó không nằm trong checklist CIS nào:
 
 | Phase | Câu hỏi duy nhất |
 |---|---|

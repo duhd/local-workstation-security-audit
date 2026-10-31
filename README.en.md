@@ -9,7 +9,7 @@ This is not theoretical. A normal developer machine routinely carries: SSH priva
 - you lose the laptop, or somebody boots it from USB;
 - an AI agent runs a command in that repo with no approval step.
 
-The largest recent crypto-exchange losses — reported in the billions of dollars — all followed this exact path: **one compromised endpoint → valid credentials on it → the live system**. The 2022 LastPass incident is the cleanest verifiable example: the attacker went after a DevOps engineer's personal machine, then reached the vault.
+The largest recent crypto losses all followed this exact path: **one compromised endpoint → valid credentials on it → the live system**. The 2022 LastPass incident is the cleanest verifiable example: the attacker went after a DevOps engineer's personal machine, then reached the vault.
 
 This repo is an executable checklist for that endpoint check — on Windows, macOS and Linux.
 
@@ -17,20 +17,45 @@ This repo is an executable checklist for that endpoint check — on Windows, mac
 
 ## Install in 60 seconds
 
-**Option 1 — harness with a skill loader:**
+**Option 1 — harness with a skill loader** (macOS / Linux / Git Bash):
 
 ```bash
+mkdir -p "$HOME/.claude/skills"
 git clone https://github.com/duhd/local-workstation-security-audit \
   "$HOME/.claude/skills/local-workstation-security-audit"
-# then run:
+# verify, then run:
+test -f "$HOME/.claude/skills/local-workstation-security-audit/SKILL.md" && echo OK
 /local-pc-security-audit
 ```
+
+**Option 1b — Windows PowerShell:**
+
+```powershell
+git clone https://github.com/duhd/local-workstation-security-audit `
+  "$env:USERPROFILE\.claude\skills\local-workstation-security-audit"
+Test-Path "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\SKILL.md"
+```
+
+> Replace `.claude/skills` with your harness's skill directory — that layout is only an example. If your harness has no concept of a skill directory, use Option 2.
 
 **Option 2 — no skill loader:** open `PROMPT.md` and paste the whole thing into your agent.
 
 **The only requirement:** the agent must have a shell tool (Bash / PowerShell / terminal). Without a shell it must stop and ask you to paste command output — it must **not** describe the checklist as if it had been checked.
 
-> **For an agent reading this:** next step is `SKILL.md` — run Phase 1 → 9 (posture), then Phase 10 → 17 (attacker-first). Read-only by default. Never print secrets. Ask the user to choose an option for each finding before changing anything on the machine.
+> **For an agent reading this:** next step is `SKILL.md` — run Phase 1 → 9 (posture), then Phase 10 → 17 (attacker-first). Read-only by default. Never print secrets. If you only have time for one pass, follow the priority order in `SKILL.md` (**17 → 10 → 12 → 11 → 14 → 13 → 15 → 16**). Ask the user to choose an option per finding before changing anything on the machine.
+
+---
+
+## What this repo contains
+
+| File | Role |
+|---|---|
+| `README.md` | Vietnamese introduction |
+| `README.en.md` | English introduction (this file) |
+| `SKILL.md` | The full skill — evidence rules, 3-OS command matrix, severity anchors, remediation playbooks, the "traps that bit" table, and **Phase 10–17** (attacker-first) |
+| `PROMPT.md` | Prompt to paste into any agent, no skill loader needed |
+| `commands/local-pc-security-audit.md` | Slash-command entry point |
+| `.gitattributes` | LF normalisation so it works on macOS/Linux |
 
 ---
 

@@ -46,7 +46,7 @@ Sau mỗi thay đổi, **đo lại bằng đúng phép đo đã dùng để phá
 
 Bắt đầu bằng Bước 0, chạy tuần tự, không bỏ bước nào. Mục không kiểm được → ghi vào *giới hạn coverage*, không suy đoán.
 
-**Bước bổ sung — phạm vi attacker-first (chạy sau Bước 8, trước khi chốt report).** Bước 1–8 phủ cấu hình nhìn thấy được; phần dưới là thứ kẻ tấn công thật sự dùng và thường bị bỏ sót. Checklist chi tiết + lệnh 3 OS nằm ở mục *Phạm vi bổ sung — attacker-first (Phase 10–17)* trong `SKILL.md`:
+**Bước bổ sung — phạm vi attacker-first (Phase 10–17), chạy sau Bước 8, trước khi chốt report.** Bước 1–8 phủ cấu hình nhìn thấy được; phần dưới là thứ kẻ tấn công thật sự dùng và thường bị bỏ sót. Checklist chi tiết + lệnh 3 OS nằm ở mục *Phạm vi bổ sung — attacker-first (Phase 10–17)* trong `SKILL.md`:
 
 1. **Danh tính**: ai còn trong `authorized_keys`; Credential Manager/Keychain/`secret-tool`; shell history (grep pattern token, không in giá trị); `AutoAdminLogon` + `DefaultPassword` (cleartext); LSA protection / Credential Guard / ptrace_scope; cached logons.
 2. **Thực thi code & leo thang**: thư mục trong `PATH` mà user ghi được; service path không quote + binary ghi được; service DACL; `whoami /priv`; `AlwaysInstallElevated`; git hook/`include.path`/`insteadOf`/`credential.helper` lạ; registry npm/pip/nuget; WSL `docker.sock` + `--privileged` + sudoers; extension `update_url`/native messaging; `.vscode/tasks.json` `runOn`.

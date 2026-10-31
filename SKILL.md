@@ -84,7 +84,7 @@ Giới hạn phải nêu rõ trong report: **patch gap ≠ CVE mapping**. Muốn
 | Nguồn | Windows | macOS / Linux |
 |---|---|---|
 | Git credential | `%USERPROFILE%\.git-credentials`; `git config --show-origin --get-all credential.helper` | `~/.git-credentials`, `~/.config/git/credentials`; macOS `security dump-keychain \| grep -c svce` (**chỉ đếm**, không `-w`/`-g` vì sẽ in mật khẩu); Linux `secret-tool search` (chỉ đếm kết quả) |
-| Cloud/registry | `.aws\credentials`, `.docker\config.json`, `.kube\config`, `.config\gh\hosts.yml` | same paths in `~`; `security find-generic-password` / `secret-tool` |
+| Cloud/registry | `.aws\credentials`, `.docker\config.json`, `.kube\config`, `.config\gh\hosts.yml` | same paths in `~`; macOS `security find-generic-password -s <svc> >/dev/null 2>&1 && echo exists` (**không** dùng `-w`, sẽ in mật khẩu); Linux `secret-tool search --all <attr> <val> >/dev/null && echo exists` (**không** in value) |
 | Agent/harness | `%USERPROFILE%\.<tool>\**`, `%APPDATA%\<tool>` | `~/.<tool>/**`, `~/Library/Application Support/<tool>` |
 | SSH | `~/.ssh/*` | `~/.ssh/*`, `~/.gnupg` |
 | Quyền file | `icacls <path>` — **không** dùng `ls -la` trong MSYS/Cygwin | `namei -l <path>`; `stat -c '%a %U:%G'`; macOS `ls -lO@` / `stat -f '%Lp %Su'` |
