@@ -3,6 +3,12 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.5.1] — 2026-11-01
+
+### Sửa lỗi
+
+- **Thứ tự thực thi còn sót ở 3 entry point**: v1.5.0 chỉ sửa `SKILL.md` + `PROMPT.md`; slash command `commands/local-pc-security-audit.md` và đoạn "Dành cho agent" trong `README.md` / `README.en.md` vẫn bảo chạy "Phase 1 → 9 rồi 10 → 17" và thiếu lượt elevated trước report. Cả 3 nay trỏ về mục *Thứ tự thực thi (full audit)*: thu thập 1–6 ∥ 10–17 → elevated → Phase 7 → Phase 9 report → Phase 8 triage.
+
 ## [1.5.0] — 2026-11-01
 
 ### Thay đổi

@@ -120,7 +120,7 @@ Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\comm
 
 Sau khi copy, khởi động lại harness (hoặc reload skills) để lệnh xuất hiện.
 
-> **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md`, chạy Phase 1 → 9 (posture) rồi Phase 10 → 17 (attacker-first). Một lượt đầy đủ là **cả 17 phase**; không có chuyện chỉ chạy một nửa. Nếu chỉ có ~30 phút thì chạy trước **Phase 1 (patch/mã hoá ổ), 3 (exposure mạng), 5 (browser)**, rồi **17 → 10 → 12** — đó là nhóm cho finding nặng nhất trên máy dev. Read-only mặc định. Không in secret. Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
+> **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md` và chạy đúng mục *Thứ tự thực thi (full audit)*: Bước 0 → thu thập Phase 1–6 (posture) song song Phase 10–17 (attacker-first) → một lượt elevated → Phase 7 → Phase 9 report → Phase 8 triage. Một lượt đầy đủ là **cả 17 phase**; không có chuyện chỉ chạy một nửa. Nếu chỉ có ~30 phút thì chạy trước **Phase 1 (patch/mã hoá ổ), 3 (exposure mạng), 5 (browser)**, rồi **17 → 10 → 12** — đó là nhóm cho finding nặng nhất trên máy dev. Read-only mặc định. Không in secret. Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
 
 ---
 

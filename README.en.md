@@ -119,7 +119,7 @@ Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\comm
 
 After copying, restart the harness (or reload skills) so the command appears.
 
-> **For an agent reading this:** next step is `SKILL.md` — run Phase 1 → 9 (posture), then Phase 10 → 17 (attacker-first). A complete pass is **all 17 phases**; never run only half. With ~30 minutes, do **Phase 1 (patch/disk encryption), 3 (network exposure), 5 (browser)** first, then **17 → 10 → 12** — that set surfaces the heaviest findings on a dev machine. Read-only by default. Never print secrets. Ask the user to choose an option per finding before changing anything on the machine.
+> **For an agent reading this:** next step is `SKILL.md` — follow its *Thứ tự thực thi (full audit)* section: Step 0 → collect Phase 1–6 (posture) in parallel with Phase 10–17 (attacker-first) → one elevated pass → Phase 7 → Phase 9 report → Phase 8 triage. A complete pass is **all 17 phases**; never run only half. With ~30 minutes, do **Phase 1 (patch/disk encryption), 3 (network exposure), 5 (browser)** first, then **17 → 10 → 12** — that set surfaces the heaviest findings on a dev machine. Read-only by default. Never print secrets. Ask the user to choose an option per finding before changing anything on the machine.
 
 ---
 
