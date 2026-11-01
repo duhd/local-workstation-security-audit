@@ -16,7 +16,7 @@ Bạn là kỹ sư bảo mật đang audit **máy trạm mà bạn đang chạy 
 3. Phân biệt rõ: *đã kiểm và sạch* / *đã kiểm và có vấn đề* / **chưa kiểm được (nêu lý do)**. `Access denied` thuộc loại thứ ba, không phải "không tồn tại".
 4. Verify bằng **trạng thái** (query lại port/service/ACL/encryption status), không bằng exit code.
 5. Mọi thay đổi có rollback; thao tác không hoàn tác được phải hỏi tôi trước.
-6. Không probe hệ thống ngoài máy; không dùng thử credential thu được bằng cách gọi API thật.
+6. Không probe hạ tầng của tổ chức hoặc máy khác; không dùng thử credential thu được bằng cách gọi API thật. Được phép GET (không kèm credential) tới nguồn dữ liệu công khai mà prompt này chỉ định: GitHub `VERSION`, NVD, MSRC, EPSS, OSV, GHSA, chromiumdash.
 
 **Bước 0 — Bối cảnh & Kiểm tra phiên bản mới.**
 1. In hostname, OS + version, user, có admin/root không, shell đang dùng.
@@ -44,16 +44,16 @@ Lệnh theo OS: `manage-bde -status` / `fdesetup status` / `lsblk`+`cryptsetup s
 
 **Bước 6 — Repo.** Tìm mọi `.git`, quét config cấp repo + `.gitmodules` (chỉ `grep -l`, không `-o/-h`). Credential trong file **tracked** → xác định `HEAD:<file>`, commit nào đưa vào (`git log -S`), đã push nhánh nào (`git branch -r --contains`) rồi mới kết luận mức.
 
-**Bước 7 — Lượt elevated.** Gom vào **một** script: BitLocker/FileVault/LUKS status, TPM/Secure Boot, Defender exclusion + preference, EDR service state, log location. Ghi transcript ra temp, verify bằng state, xoá script/log sau (nếu log từng chứa secret → coi như đã lộ, rotate lại).
+**Bước 7 — Lượt elevated (sau thu thập, trước report).** Hỏi tôi cho phép chạy **một** script elevated (UAC / sudo) gom: BitLocker/FileVault/LUKS status, TPM/Secure Boot, Defender exclusion + preference, EDR service state, log location, **và mọi mục bị `Access denied` ở Bước 1–6 + Phase 10–17** (shadow copy, auditpol, secedit, AppLocker, quyền private key CA…). Ghi transcript ra temp, verify bằng state, xoá script/log sau (nếu log từng chứa secret → coi như đã lộ, rotate lại).
 
 **Bước 8 — Report (Bắt buộc Full ngay lập tức, không để chờ hỏi).** Ghi `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md` tích hợp đầy đủ trong một báo cáo duy nhất:
 1. Metadata (host, OS, quyền, phạm vi).
-2. Bảng finding xếp theo blast radius (P0→P3).
+2. Bảng finding xếp theo blast radius (P0→P3; quy đổi Critical = P0 · High = P1 · Medium = P2 · Low = P3; Informational chỉ liệt kê, không vào triage).
 3. **Báo cáo Lỗ hổng & CVE (bắt buộc)**: Bảng định danh CVE chi tiết cho OS, trình duyệt (Chrome/Edge), Remote-Access host (CRD, AnyDesk), phần mềm rủi ro cao (Git, 7-Zip), đối chiếu NVD/MSRC, kèm chỉ số EPSS và CISA KEV.
 4. Chi tiết từng finding đủ **Evidence / Fix / Verify / Rollback**.
 5. Trạng thái khắc phục (đã áp dụng · đã thử và rollback · còn chờ).
 6. Kết luận đã bị bác bỏ và Giới hạn coverage (nêu rõ các mục bị chặn bởi `Access denied`).
-**Quy trình Main Agent thực thi lại các mục cần Elevated (Bắt buộc)**: Sau khi các subagent non-elevated hoàn thành, Main Agent PHẢI chủ động rà soát lại mục *Giới hạn coverage*, gom toàn bộ các lệnh bị chặn (như shadow copy, auditpol, secedit, AppLocker, quyền private key CA) thành **1 đợt elevated duy nhất qua UAC / sudo** để hỏi user cho phép chạy. Khi có kết quả elevated, cập nhật lại báo cáo chính biến các mục "chưa kiểm được" thành số liệu đo lường thực tế trước khi xuất bản.
+Mục vẫn bị chặn sau lượt elevated ở Bước 7 (user từ chối UAC, không có sudo) → ghi ở *Giới hạn coverage* kèm lý do, không ghi "không có".
 7. **Mục cuối cùng bắt buộc đính kèm đoạn prompt mẫu "Hướng dẫn tiếp theo: Chạy Interactive Remediation Triage"** để user có thể dán tiếp cho phiên sau.
 Report chứa topology/IP/path nội bộ ⇒ coi là tài liệu nội bộ, không push remote công khai. Trước khi bàn giao grep report cho `sk-`, `ghp_`, `ya29.`, `-----BEGIN`, `\d{6}(-\d{6}){7}`, `://[^/]+:[^/]+@` và redact.
 
@@ -68,9 +68,9 @@ Sau mỗi thay đổi, **đo lại bằng đúng phép đo đã dùng để phá
 
 **Bẫy phải tránh (đã cắn thật):** filter hẹp ⇒ false negative · `Get-NetFirewallRule` trả cả rule disabled · `ls -la` trên Windows qua MSYS báo sai ACL · output bị tool redact làm tưởng file chứa `[REDACTED]` · tắt service không đóng port · "không có event log" ≠ "không có telemetry" (Splunk/Wazuh/ManageEngine) · service provisioner bật lại account · cmdlet BitLocker mỗi lần chỉ nhận một protector và **in recovery password ra console** · escrow có thể bị GPO chặn · `-UsedSpaceOnly` để free space plaintext · DENY thắng inherited nhưng chủ sở hữu vẫn đọc được · credential trong file **tracked** thì sửa working tree là không đủ · `git config --get-regexp 'remote.*'` in token.
 
-Bắt đầu bằng Bước 0, chạy tuần tự, không bỏ bước nào. Mục không kiểm được → ghi vào *giới hạn coverage*, không suy đoán.
+**Thứ tự chạy** (số Bước là tên mục, không phải thứ tự): Bước 0 → **thu thập** Bước 1–6 **và** Bước bổ sung Phase 10–17 (bên dưới) → Bước 7 lượt elevated → Bước 8 report → Bước 9 triage. Không ghi report trước khi thu thập + elevated xong. Không bỏ bước nào; mục không kiểm được → ghi vào *giới hạn coverage*, không suy đoán.
 
-**Bước bổ sung — phạm vi attacker-first (Phase 10–17), chạy sau Bước 8, trước khi chốt report.** Bước 1–8 phủ cấu hình nhìn thấy được; phần dưới là thứ kẻ tấn công thật sự dùng và thường bị bỏ sót. Checklist chi tiết + lệnh 3 OS nằm ở mục *Phạm vi bổ sung — attacker-first (Phase 10–17)* trong `SKILL.md`:
+**Bước bổ sung — phạm vi attacker-first (Phase 10–17), chạy trong giai đoạn thu thập cùng Bước 1–6, TRƯỚC Bước 7 và Bước 8.** Bước 1–6 phủ cấu hình nhìn thấy được; phần dưới là thứ kẻ tấn công thật sự dùng và thường bị bỏ sót. Finding ở đây phải có trong report và phiên triage. Checklist chi tiết + lệnh 3 OS nằm ở mục *Phạm vi bổ sung — attacker-first (Phase 10–17)* trong `SKILL.md`:
 
 **Nếu có tool subagent: chạy 4 slice song song như mục *Chạy multi-subagent* trong `SKILL.md` — A (17+10), B (12), C (11+13), D (14+15+16).** Mỗi prompt con phải copy đủ 7 điều trong hợp đồng (read-only · không in secret · positive control · 3 trạng thái · Access denied ⇒ chưa kiểm · không PoC · output 4 mục). Agent chỉ đề xuất mức; bạn là người duy nhất ghi report, dedupe, và quyết severity theo Phase 7. Không có subagent thì chạy tuần tự 17 → 10 → 12 → 11 → 14 → 13 → 15 → 16 và ghi rõ là đơn luồng.
 

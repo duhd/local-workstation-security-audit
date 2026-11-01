@@ -23,9 +23,22 @@ Audit **máy trạm** (không phải codebase) trên Windows / macOS / Linux. M�
 | Chế độ | Khi nào | Việc phải làm |
 |---|---|---|
 | **Guidance** | Hỏi một câu bảo mật, review một mục, triage | Chỉ dùng phần liên quan; không tạo report |
-| **Full audit** | "đánh giá bảo mật máy", "audit toàn bộ" | Chạy đủ Phase 1→9 (bắt buộc kèm scan CVE phần mềm & browser), ghi report |
+| **Full audit** | "đánh giá bảo mật máy", "audit toàn bộ" | Chạy đủ Phase 1→17 (bắt buộc kèm scan CVE phần mềm & browser) theo *Thứ tự thực thi* bên dưới, ghi report |
 
 Trước khi bắt đầu: chốt **host, OS/version, user chạy, có quyền admin không, phạm vi** (máy này / thêm ổ khác / thêm repo).
+
+### Thứ tự thực thi (full audit)
+
+Số Phase là tên mục, **không** phải thứ tự chạy. Thứ tự đúng:
+
+1. **Bước 0** — kiểm tra phiên bản skill.
+2. **Thu thập** — Phase 1–6 (parent tự chạy) **song song** Phase 10–17 (slice A–D, xem *Chạy multi-subagent*). Chỉ đọc, không sửa.
+3. **Lượt elevated** — gom mọi mục `Access denied` của bước 2 vào 1 script, xin phép user chạy 1 lần.
+4. **Phase 7** — xếp mức toàn bộ finding (cả 1–6 lẫn 10–17).
+5. **Phase 9** — ghi report đầy đủ.
+6. **Phase 8** — triage từng finding với user, áp dụng, đo lại, cập nhật mục *Trạng thái khắc phục* trong report.
+
+Không ghi report trước khi bước 2–3 xong: finding của Phase 10–17 phải nằm trong report và trong phiên triage.
 
 ### Kiểm tra phiên bản mới nhất & Hỏi cập nhật (Bước 0)
 
@@ -71,7 +84,7 @@ reg query <key> /s
 
 ### Chạy multi-subagent (mặc định cho full audit)
 
-17 phase chạy tuần tự sẽ đốt context và dễ bỏ sót. Chia thành **4 slice độc lập**, mỗi subagent một slice, **tối đa 4 agent đồng thời**:
+17 phase chạy tuần tự sẽ đốt context và dễ bỏ sót. Parent tự chạy **Phase 1–6** (cần kết quả để làm CVE mapping và dedupe), còn **Phase 10–17** chia thành **4 slice độc lập**, mỗi subagent một slice, **tối đa 4 agent đồng thời**:
 
 | Slice | Phase | Nội dung |
 |---|---|---|
@@ -102,7 +115,7 @@ Giao theo thứ tự blast radius **A → B → C → D**, nhưng chạy song so
 
 **Cấm**: hai agent cùng sửa một file; agent tự apply fix (mọi mutation vẫn qua Phase 8 + quyết định của user); agent chạy phase ngoài slice của mình (trùng lặp ⇒ tốn và lệch số liệu).
 
-**Không có tool subagent?** Chạy tuần tự theo đúng thứ tự ưu tiên *17 → 10 → 12 → 11 → 14 → 13 → 15 → 16*, và ghi rõ trong report là chạy đơn luồng.
+**Không có tool subagent?** Chạy tuần tự Phase 1–6, rồi Phase 10–17 theo thứ tự ưu tiên *17 → 10 → 12 → 11 → 14 → 13 → 15 → 16*, và ghi rõ trong report là chạy đơn luồng.
 
 
 ## Phase 1 — Recon & posture
@@ -110,7 +123,7 @@ Giao theo thứ tự blast radius **A → B → C → D**, nhưng chạy song so
 | Hạng mục | Windows | macOS | Linux |
 |---|---|---|---|
 | OS/build | `Get-CimInstance Win32_OperatingSystem` | `sw_vers` | `cat /etc/os-release; uname -a` |
-| Patch | `(New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher().Search('IsInstalled=0').Updates.Count` | `softwareupdate -l` | `apt list --upgradable 2>/dev/null \| wc -l` / `dnf check-update` |
+| Patch | `(New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher().Search('IsInstalled=0').Updates.Count` | `softwareupdate -l` | `apt list --upgradable 2>/dev/null \| grep -c upgradable` / `dnf check-update` |
 | Elevation | `whoami /groups \| findstr S-1-16-12288` | `id -u` (0=root) | `id -u` |
 | Mã hoá ổ | `manage-bde -status C:` hoặc `Get-BitLockerVolume` | `fdesetup status`; `diskutil apfs list` | `lsblk -o NAME,FSTYPE,MOUNTPOINT`; `cryptsetup status <dev>`; `findmnt -no FSTYPE /` |
 | TPM/secure boot | `Get-Tpm`; `Confirm-SecureBootUEFI` | `system_profiler SPiBridgeDataType`; `csrutil status`; `spctl --status` | `/sys/class/tpm/tpm0`; `mokutil --sb-state`; `bootctl status` |
@@ -289,7 +302,7 @@ Mỗi entry: **resolve target** (path thật + args), **chữ ký/hash**, **quy�
 
 ```bash
 # tìm repo (tăng maxdepth theo máy; ghi lại độ sâu đã quét)
-find ~ -maxdepth 4 -name .git -type d 2>/dev/null | sed 's#/.git$##'
+find ~ -maxdepth 4 -name .git 2>/dev/null | sed 's#/.git$##'   # không -type d: worktree/submodule có .git là FILE
 
 # 1) remote — LUÔN redact, vì remote.*.url có thể chứa user:token
 git -C <repo> remote -v | sed -E 's#://[^@/]+@#://<redacted>@#'
@@ -298,7 +311,8 @@ git -C <repo> remote -v | sed -E 's#://[^@/]+@#://<redacted>@#'
 git -C <repo> config --local --get-regexp '^(credential|http\.|url\.)'
 
 # 3) .gitmodules — chỉ in TÊN FILE (-l), không -o/-h
-grep -lE '://[^/[:space:]]+:[^/[:space:]]+@' $(find ~ -maxdepth 4 -name .gitmodules 2>/dev/null)
+# -print0/xargs -0: path có dấu cách; -r: không có file thì không chạy grep (grep không đối số sẽ treo chờ stdin)
+find ~ -maxdepth 4 -name .gitmodules -print0 2>/dev/null | xargs -0 -r grep -lE '://[^/[:space:]]+:[^/[:space:]]+@'
 ```
 
 Nếu credential nằm trong **file tracked**:
@@ -325,7 +339,11 @@ Xếp theo **blast radius**, không theo thứ tự checklist.
 
 Không gán mức cho mục **chưa kiểm được**. Nếu chưa chứng minh được điều kiện khai thác, ghi "exposure tiềm năng, kích hoạt bằng X".
 
+Quy đổi sang nhãn ưu tiên dùng trong report và triage: **Critical = P0 · High = P1 · Medium = P2 · Low = P3**. Informational không có nhãn P và không đưa vào triage (chỉ liệt kê trong report).
+
 ## Phase 8 — Remediation (theo quyết định của user)
+
+Chạy **sau** khi report Phase 9 đã ghi (xem *Thứ tự thực thi*); kết quả áp dụng cập nhật ngược vào mục *Trạng thái khắc phục* của report.
 
 Với **từng** finding, Agent PHẢI đưa người dùng vào một giao diện lựa chọn tường minh — không được tự suy đoán phương án. Có **hai nhánh**, chọn theo tool thực có trong harness đang chạy:
 
@@ -382,7 +400,7 @@ Mỗi thay đổi phải được đo lại **bằng đúng phép đo đã dùng
 |---|---|---|---|
 | Block port từ dải mạng | `New-NetFirewallRule -Direction Inbound -Protocol TCP -LocalPort <p> -RemoteAddress <cidr> -Action Block` / `ufw deny from <cidr> to any port <p>` | `netsh advfirewall firewall show rule name=<n> verbose`; test từ máy khác | `Remove-NetFirewallRule -DisplayName <n>` / `ufw delete deny ...` |
 | Chặn principal khác đọc secret | `icacls <path> /deny "<group>:(RX)"` / `setfacl -m g:<group>:- -R <path>` / `chmod 600` | `icacls <path>` thấy `(DENY)` trước `(I)`; `getfacl`; **đo lại sau khi restart process** | `icacls <path> /remove:d <group>` / `setfacl -x` |
-| Disable account | `Disable-LocalUser -Name <u>` / `dscl . -delete /Users/<u>` / `usermod -L <u>` | `Get-LocalUser` / `passwd -S`; kiểm lại sau khi service provisioner chạy | `Enable-LocalUser` / `usermod -U` |
+| Disable account | `Disable-LocalUser -Name <u>` / macOS `sudo pwpolicy -u <u> -disableuser` (**không** dùng `dscl . -delete` — đó là xoá account, không hoàn tác được) / `usermod -L <u>` | `Get-LocalUser` / `dscl . -read /Users/<u> AuthenticationAuthority` thấy `;DisabledUser;` / `passwd -S`; kiểm lại sau khi service provisioner chạy | `Enable-LocalUser` / `sudo pwpolicy -u <u> -enableuser` / `usermod -U` |
 | Credential helper | `manager` (Win) / `osxkeychain` (mac) / `libsecret` (Linux) | `git config --show-origin --get-all credential.helper` | đặt lại helper cũ |
 | BitLocker | recovery password **trước** → TPM → escrow | `manage-bde -status` → `Protection On` + `Fully Encrypted` | `Disable-BitLocker` |
 | FileVault | `fdesetup enable` (lưu recovery key) | `fdesetup status` | `fdesetup disable` |
@@ -397,14 +415,14 @@ Ngoài việc sửa các finding sau khi phát hiện lỗi (Reactive Remediatio
 
 | Nhóm kiểm soát | Mục tiêu an ninh | Lệnh cấu hình khuyến nghị | Rollback |
 |---|---|---|---|
-| **LSA Protection (RunAsPPL)** | Chống inject code và dump credential từ LSASS (Mimikatz) | `Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name 'RunAsPPL' -Value 2 -Type DWord` | Đổi Value về `0` hoặc `1` |
+| **LSA Protection (RunAsPPL)** | Chống inject code và dump credential từ LSASS (Mimikatz) | `Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name 'RunAsPPL' -Value 2 -Type DWord` rồi **reboot** (`2` = không UEFI lock, chỉ có hiệu lực từ Windows 11 22H2; `1` = có UEFI lock, registry không gỡ được) | `Remove-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name 'RunAsPPL'` (hoặc đặt `0`) rồi reboot. **Không** đặt `1` khi rollback — `1` là bật kèm UEFI lock |
 | **Credential Guard** | Cô lập NTLM/Kerberos hash trong VBS enclave | Bật GPO `Computer Configuration -> Administrative Templates -> System -> Device Guard` | Tắt policy |
 | **Poisoning Defense** | Tắt LLMNR và NetBIOS broadcast (chống NTLM Relay) | `New-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient' -Force; Set-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient' -Name 'EnableMulticast' -Value 0 -Type DWord` | Xoá value `EnableMulticast` |
 | **Memory Dump Hygiene** | Tắt Fast Startup & Hibernation để RAM không lưu xuống đĩa unencrypted | `powercfg /h off` | `powercfg /h on` |
 | **Print Spooler** | Tắt Print Spooler (chống PrintNightmare) nếu không dùng máy in | `Set-Service Spooler -StartupType Disabled; Stop-Service Spooler` | `Set-Service Spooler -StartupType Automatic; Start-Service Spooler` |
-| **Attack Surface Reduction** | Bật Defender ASR chặn Office/Script spawn process & LSASS theft | `Set-MpPreference -AttackSurfaceReductionRules_Ids 92e63a44-e0e6-4b4f-8a48-8dfa1d8c1995,d4f940ab-401b-4efc-a9ad-ad5f3c506822 -AttackSurfaceReductionRules_Actions Enabled,Enabled` | Đổi Actions sang `AuditMode` hoặc `Disabled` |
+| **Attack Surface Reduction** | Chặn Office spawn child process & đánh cắp credential từ LSASS | `Add-MpPreference -AttackSurfaceReductionRules_Ids d4f940ab-401b-4efc-aadc-ad5f3c50688a,9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2 -AttackSurfaceReductionRules_Actions Enabled,Enabled` (dùng `Add-`, **không** `Set-`: `Set-MpPreference` ghi đè toàn bộ danh sách ASR đang có). Rule LSASS thừa nếu đã bật RunAsPPL. Verify: `(Get-MpPreference).AttackSurfaceReductionRules_Ids` | `Remove-MpPreference -AttackSurfaceReductionRules_Ids <id>` |
 | **SMB Security** | Tắt SMBv1, ép buộc SMB Signing | `Set-SmbServerConfiguration -EnableSMB1Protocol $false -RequireSecuritySignature $true -Force` | Đặt lại giá trị cũ |
-| **UAC Strictness** | Bắt buộc nhập mật khẩu khi chạy tác vụ Administrator | `Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'ConsentPromptBehaviorAdmin' -Value 2 -Type DWord` | Đổi lại về `5` (Prompt for consent) |
+| **UAC Strictness** | Bắt buộc nhập mật khẩu khi chạy tác vụ Administrator | `Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'ConsentPromptBehaviorAdmin' -Value 1 -Type DWord` (`1` = hỏi credential trên secure desktop; `2` chỉ hỏi Yes/No) | Đổi lại về `5` (mặc định: hỏi consent cho binary không phải của Windows) |
 | **Dev PATH Hygiene** | Đưa các thư mục user-writable (`AppData\Local\...`) xuống sau `System32` | Sửa lại thứ tự trong biến môi trường Machine `PATH` qua System Properties hoặc `setx` | Sắp xếp lại |
 
 #### 2. macOS Hardening Baseline (Zsh / sudo)
@@ -448,10 +466,10 @@ Cấu trúc báo cáo bắt buộc:
 5. **Trạng thái khắc phục**: đã áp dụng (kèm verify) / đã thử và rollback (kèm lý do) / còn chờ (kèm điều kiện).
 6. **Kết luận đã bị bác bỏ**: giữ lại để người sau không lặp lại.
 7. **Giới hạn coverage**: Liệt kê chi tiết các mục chưa kiểm được và lý do (chủ yếu do thiếu quyền Administrator / UAC).
-8. **Quy trình Main Agent thực thi lại các mục cần Elevated (Bắt buộc)**:
-   - Sau khi kết xuất báo cáo sơ bộ, Main Agent PHẢI chủ động rà soát lại toàn bộ danh sách tại mục *Giới hạn coverage*.
-   - Đối với các mục bị chặn bởi `Access denied` (như `vssadmin list shadows`, `auditpol`, `secedit`, `Get-AppLockerPolicy`, quyền private key CA, kiểm tra sâu BitLocker/TPM), Main Agent **bắt buộc phải chủ động hỏi user để xin phép chạy 1 đợt script elevated duy nhất qua UAC / sudo**.
-   - Sau khi hoàn thành đợt elevated, Main Agent cập nhật lại báo cáo chính, đưa các mục từ trạng thái "chưa kiểm được" sang số liệu đo lường thực tế trước khi kết thúc phiên.
+8. **Lượt elevated (Bắt buộc, chạy TRƯỚC khi ghi report — bước 3 của *Thứ tự thực thi*)**:
+   - Main Agent rà toàn bộ mục bị chặn bởi `Access denied` trong bước thu thập (như `vssadmin list shadows`, `auditpol`, `secedit`, `Get-AppLockerPolicy`, quyền private key CA, kiểm tra sâu BitLocker/TPM).
+   - **Bắt buộc chủ động hỏi user để xin phép chạy 1 đợt script elevated duy nhất qua UAC / sudo**, đưa kết quả đo thực tế vào report.
+   - Mục nào vẫn không chạy được (user từ chối UAC, không có sudo) → giữ ở *Giới hạn coverage* kèm lý do.
 9. **Hướng dẫn tiếp theo (Interactive Remediation Triage)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding — theo đúng 2 nhánh ở Phase 8 (Ask Question tool nếu harness có, menu đánh số nếu không).
 Prompt mẫu bắt buộc phải có ở cuối report:
 ```markdown
@@ -492,14 +510,14 @@ Trước khi bàn giao: grep report cho `sk-`, `ghp_`, `ya29.`, `-----BEGIN`, `\
 ## Không được làm
 
 - Không thử credential/PAT thu được bằng cách gọi API thật (đó là hành vi dùng credential).
-- Không probe endpoint ngoài máy, không quét mạng nội bộ khi chưa được phép.
+- Không probe hạ tầng/endpoint của tổ chức hoặc máy khác, không quét mạng nội bộ khi chưa được phép. **Được phép**: GET tới nguồn dữ liệu công khai mà skill chỉ định (GitHub `VERSION`, NVD, MSRC, EPSS, OSV, GHSA, chromiumdash) — không kèm credential.
 - Không in nội dung secret, kể cả "để chứng minh".
 - Không xoá/đổi file của người khác; không force-push branch đã publish mà chưa được duyệt.
 - Không tuyên bố "đã audit xong toàn bộ" — luôn nêu coverage và phần chưa kiểm.
 
 ## Phạm vi bổ sung — attacker-first (Phase 10–17)
 
-Phase 1–9 phủ *cấu hình nhìn thấy được*. Phần dưới là những gì kẻ tấn công thật sự dùng trên một máy dev workstation, và thường **bị bỏ sót** vì không nằm trong checklist posture. Chạy sau Phase 9, hoặc chọn theo mục tiêu tấn công.
+Phase 1–9 phủ *cấu hình nhìn thấy được*. Phần dưới là những gì kẻ tấn công thật sự dùng trên một máy dev workstation, và thường **bị bỏ sót** vì không nằm trong checklist posture. Chạy **trong bước thu thập**, song song với Phase 1–6 và **trước** Phase 7/9 (xem *Thứ tự thực thi*) — finding ở đây phải vào report và phiên triage. Chế độ Guidance có thể chọn từng mục theo mục tiêu tấn công.
 
 Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nếu mục này hở", và chỉ ghi *sự tồn tại + quyền*, không in giá trị.
 
@@ -564,7 +582,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 
 | Kẻ tấn công dùng để | Kiểm |
 |---|---|
-| PSK Wi-Fi đọc được | `netsh wlan show profiles` (chỉ tên profile) → với profile `WPA2-Personal` thì PSK đọc được; **không** thêm tham số in PSK, chỉ ghi "profile X dùng WPA2-Personal ⇒ PSK đọc được" |
+| PSK Wi-Fi đọc được | `netsh wlan show profiles` (chỉ tên profile) → profile `WPA2-Personal` thì **admin** đọc được PSK (`key=clear` cần quyền cao); **không** thêm tham số in PSK, chỉ ghi "profile X dùng WPA2-Personal ⇒ PSK đọc được bởi admin/malware chạy elevated" |
 | Poisoning | LLMNR `EnableMulticast`, NetBIOS `NetbiosOptions`, mDNS responder |
 | NTLM leak khi clone repo | File `.lnk/.url/.scf/.library-ms` trong repo (mở ra → gửi hash); `git ls-files '*.[lL][nN][kK]'` |
 | Kênh phụ | Print Spooler + Point-and-Print, `WebClient`/WebDAV, `Search-ms` handler |

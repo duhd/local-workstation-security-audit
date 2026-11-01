@@ -3,6 +3,24 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.5.0] — 2026-11-01
+
+### Thay đổi
+
+- **Thứ tự thực thi full audit được chuẩn hoá**: Bước 0 → thu thập (Phase 1–6 do parent chạy, song song Phase 10–17 theo slice A–D) → lượt elevated → Phase 7 → Phase 9 report → Phase 8 triage. Trước đây bảng chế độ ghi "Phase 1→9", Phase 10–17 "chạy sau Phase 9" (sau khi report đã chốt) và multi-subagent không giao Phase 1–6 cho ai ⇒ finding attacker-first có thể không vào report/triage. `PROMPT.md` áp cùng thứ tự; lượt elevated gộp về một chỗ (trước report).
+- **Quy đổi severity**: Critical = P0 · High = P1 · Medium = P2 · Low = P3; Informational không vào triage.
+- **Làm rõ luật gọi API ngoài**: cấm probe hạ tầng tổ chức/máy khác; được phép GET không kèm credential tới nguồn dữ liệu công khai skill chỉ định (GitHub `VERSION`, NVD, MSRC, EPSS, OSV, GHSA, chromiumdash).
+
+### Sửa lỗi (lệnh sai — đã đối chiếu tài liệu Microsoft)
+
+- **ASR**: thay 2 GUID không tồn tại bằng GUID thật (`d4f940ab-401b-4efc-aadc-ad5f3c50688a` Office child process, `9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2` LSASS); dùng `Add-MpPreference` thay `Set-MpPreference` (lệnh `Set-` ghi đè toàn bộ danh sách ASR); rollback bằng `Remove-MpPreference`.
+- **UAC**: `ConsentPromptBehaviorAdmin` đổi `2` → `1` — `2` chỉ hỏi Yes/No, `1` mới bắt nhập credential.
+- **RunAsPPL**: rollback không còn gợi ý đặt `1` (bật kèm UEFI lock); dùng xoá value hoặc `0` + reboot; ghi rõ cần reboot khi bật.
+- **Disable account macOS**: thay `dscl . -delete` (xoá account, không hoàn tác được) bằng `pwpolicy -disableuser` / `-enableuser`.
+- **Phase 6**: pipeline quét `.gitmodules` không còn treo khi không có file (grep chờ stdin) và không tách path có dấu cách (`find -print0 | xargs -0 -r`); tìm repo bỏ `-type d` để không sót worktree/submodule (`.git` là file).
+- `apt list --upgradable | wc -l` đếm thừa dòng `Listing...` → `grep -c upgradable`.
+- Phase 15: PSK Wi-Fi WPA2-Personal chỉ đọc được với quyền admin.
+
 ## [1.4.2] — 2026-11-01
 
 ### Sửa lỗi
