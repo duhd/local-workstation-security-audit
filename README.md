@@ -184,20 +184,21 @@ Report `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md`:
 
 Report chứa IP, hostname, đường dẫn nội bộ ⇒ **coi là tài liệu nội bộ**, đừng commit vào repo công khai.
 
-### Tương tác sau Audit: Ask Question tool hoặc menu đánh số
+### Tương tác sau Audit: Ask Question tool hoặc menu đánh số trên TỪNG finding
 
-Sau khi hoàn tất audit và xuất report, **không nên tự ý sửa thủ công hay để Agent tự động sửa toàn bộ**. Cơ chế lựa chọn phụ thuộc harness đang chạy:
+Sau khi hoàn tất audit và xuất report, **tuyệt đối không tự ý sửa thủ công, không để Agent tự động sửa toàn bộ, và KHÔNG gom cụm/batch nhiều finding vào một câu hỏi**. Bắt buộc phải triage **từng finding riêng lẻ (1 finding = 1 câu hỏi tương tác)** từ P0, P1 đến P3. Cơ chế lựa chọn phụ thuộc harness đang chạy:
 
-- **Harness có Ask Question tool** (Claude Code, Oh My Pi, …): Agent bắt buộc gọi `ask` / `AskUserQuestion` để bạn chọn từ hộp thoại.
-- **Harness không có tool đó** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, chat thuần): Agent in menu đánh số `1) Accept · 2) Fix tối thiểu · 3) Fix triệt để` và dừng chờ bạn trả lời.
+- **Harness có Ask Question tool** (Claude Code, Oh My Pi, …): Agent bắt buộc gọi `ask` / `AskUserQuestion` cho từng finding một để bạn duyệt kỹ bằng chứng và chọn từ hộp thoại UI.
+- **Harness không có tool đó** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, chat thuần): Agent in menu đánh số `1) Accept · 2) Fix tối thiểu · 3) Fix triệt để` cho từng finding đơn lẻ và dừng chờ bạn trả lời rõ ràng trước khi sang finding tiếp theo.
 
 Dùng prompt mẫu sau để yêu cầu Agent triage:
 
 ```markdown
-"Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và sử dụng công cụ Ask Question (hoặc cơ chế hỏi trắc nghiệm tương tác) để lần lượt hỏi tôi về từng finding (từ P0, P1 đến P3). Với mỗi finding, hãy cung cấp rõ các options:
-1. Phương án Accept (chấp nhận rủi ro, phân tích hệ quả).
-2. Các phương án Fix cụ thể (tối thiểu, triệt để, kèm lệnh sẽ chạy, kiểm tra tác động phá chức năng nếu có).
-Chỉ thực thi phương án khi tôi đã bấm chọn quyết định."
+"Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và sử dụng công cụ Ask Question (hoặc cơ chế hỏi trắc nghiệm tương tác) để lần lượt hỏi tôi về TỪNG finding riêng lẻ (1 finding = 1 câu hỏi, tuyệt đối không gom cụm / batch, theo thứ tự từ P0, P1 đến P3). Với mỗi finding, hãy cung cấp rõ 3 options:
+1. Phương án Accept (chấp nhận rủi ro, phân tích hệ quả của việc không sửa).
+2. Phương án Fix tối thiểu (sửa bề mặt, ít rủi ro phá vỡ chức năng, kèm lệnh sẽ chạy và rollback).
+3. Phương án Fix triệt để (đóng triệt để rủi ro, kèm lệnh sẽ chạy, cảnh báo tác động phá chức năng nếu có và rollback).
+Chỉ thực thi phương án khi tôi đã bấm chọn quyết định cho finding đó."
 ```
 
 ---

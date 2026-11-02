@@ -3,6 +3,16 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.5.2] — 2026-11-02
+
+### Sửa lỗi
+
+- **Cấm gom cụm/batch finding trong phiên Interactive Remediation Triage**:
+  - `SKILL.md`: Bỏ hoàn toàn tuỳ chọn "Batch hoặc tuần tự từng finding" ở Phase 8 Nhánh A; siết chặt bắt buộc tuần tự từng finding riêng lẻ (1 finding = 1 câu hỏi tương tác, tuyệt đối không batch), P0 → P1 → P2 → P3 để người dùng có đầy đủ không gian đánh giá bằng chứng và lệnh sửa trước khi bấm chọn.
+  - `PROMPT.md`: Cập nhật Bước 9 nhấn mạnh cấm batching/grouping findings; mỗi finding là 1 lần gọi tool hoặc 1 menu riêng lẻ.
+  - `commands/local-pc-security-audit.md`: Bổ sung rõ ràng ràng buộc gọi tool Ask Question (`ask` / `AskUserQuestion`) hoặc menu đánh số trên từng finding một, cấm gom cụm.
+  - `README.md` & `README.en.md`: Cập nhật heading và prompt mẫu chuẩn hoá việc triage từng finding đơn lẻ (1 finding = 1 câu hỏi).
+
 ## [1.5.1] — 2026-11-01
 
 ### Sửa lỗi

@@ -183,20 +183,21 @@ A report at `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md`:
 
 The report contains IPs, hostnames and internal paths ⇒ **treat it as internal**, never commit it to a public repo.
 
-### Post-Audit Interactive Triage: Ask Question Tool or Numbered Menu
+### Post-Audit Interactive Triage: Ask Question Tool or Numbered Menu on EACH Finding
 
-Once the audit is completed and the report is generated, **do not manually guess fixes or let the agent blindly mutate your system**. The selection mechanism depends on the harness you run:
+Once the audit is completed and the report is generated, **never manually guess fixes, never let the agent blindly mutate your system, and DO NOT batch multiple findings into a single prompt**. You must triage **each finding individually (1 finding = 1 interactive question)** from P0, P1 down to P3. The selection mechanism depends on the harness you run:
 
-- **Harness with an Ask Question tool** (Claude Code, Oh My Pi, …): the agent must call `ask` / `AskUserQuestion` so you pick from an interactive dialog.
-- **Harness without one** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, plain chat): the agent prints a numbered menu `1) Accept · 2) Minimal fix · 3) Full fix` and waits for your explicit reply.
+- **Harness with an Ask Question tool** (Claude Code, Oh My Pi, …): the agent must call `ask` / `AskUserQuestion` for each finding individually so you can review evidence and choose from an interactive dialog.
+- **Harness without one** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, plain chat): the agent prints a numbered menu `1) Accept · 2) Minimal fix · 3) Full fix` for each individual finding and stops to wait for your explicit reply before moving to the next.
 
 Paste this prompt to have the agent triage finding-by-finding:
 
 ```markdown
-"Based on the completed audit report, act as a senior system security engineer and use the Ask Question tool (or interactive selection UI) to walk me through each finding one-by-one (from P0, P1 down to P3). For each finding, provide clear options:
-1. An Accept option (explaining the accepted risk and operational consequences).
-2. Concrete Fix options (minimal vs. complete, including exact commands to run and any breaking side effects).
-Only execute the chosen remediation after I explicitly confirm my choice."
+"Based on the completed audit report, act as a senior system security engineer and use the Ask Question tool (or interactive selection UI) to walk me through EACH INDIVIDUAL FINDING one-by-one (1 finding = 1 question, absolutely NO batching/grouping, in order from P0, P1 down to P3). For each finding, provide 3 clear options:
+1. Accept (explaining the accepted risk and operational consequences of not fixing).
+2. Minimal fix (direct surface patch, low breaking risk, with exact commands and rollback).
+3. Full fix (thoroughly closes the risk, with exact commands, warnings of breaking changes if any, and rollback).
+Only execute the chosen remediation after I explicitly confirm my choice for that finding."
 ```
 
 ---

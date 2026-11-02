@@ -348,12 +348,12 @@ Chạy **sau** khi report Phase 9 đã ghi (xem *Thứ tự thực thi*); kết 
 Với **từng** finding, Agent PHẢI đưa người dùng vào một giao diện lựa chọn tường minh — không được tự suy đoán phương án. Có **hai nhánh**, chọn theo tool thực có trong harness đang chạy:
 
 **Nhánh A — Harness có Ask Question tool** (`ask` / `AskUserQuestion`): BẮT BUỘC gọi tool đó.
-- **Batch hoặc tuần tự từng finding**: 1 câu hỏi tương ứng 1 finding (từ P0, P1 đến P3).
-- **Các options chuẩn bắt buộc cung cấp**:
-  1. `Accept`: Chấp nhận rủi ro (kèm phân tích hệ quả).
+- **Tuần tự từng finding riêng biệt (1 finding = 1 câu hỏi, TUYỆT ĐỐI KHÔNG BATCH gom cụm finding lại)**: Duyệt lần lượt theo thứ tự blast radius P0 → P1 → P2 → P3. Mỗi finding là một lượt gọi tool hoặc một câu hỏi đơn lẻ để người dùng đưa ra quyết định độc lập, có đủ không gian đọc kỹ bằng chứng và lệnh sửa.
+- **Các options chuẩn bắt buộc cung cấp cho mỗi finding**:
+  1. `Accept`: Chấp nhận rủi ro (kèm phân tích hệ quả của việc không sửa).
   2. `Fix tối thiểu`: Sửa bề mặt trực tiếp, ít rủi ro phá vỡ chức năng.
   3. `Fix triệt để`: Đóng triệt để rủi ro (kèm cảnh báo tác động phá chức năng nếu có).
-- Mỗi option phải có `description` nêu rõ: lệnh sẽ chạy, hệ quả, rollback.
+- Mỗi option phải có `description` nêu rõ: lệnh cụ thể sẽ chạy, hệ quả, cách rollback.
 
 **Nhánh B — Harness không có tool đó** (Codex CLI, Cursor, Windsurf, Cline, Claude Desktop, hoặc bất kỳ client chỉ chat thuần): trình bày menu **đánh số** cho từng finding và dừng chờ người dùng trả lời rõ ràng (số hoặc tên phương án):
 ```text
@@ -475,10 +475,11 @@ Prompt mẫu bắt buộc phải có ở cuối report:
 ```markdown
 ## Hướng dẫn tiếp theo: Chạy Interactive Remediation Triage
 
-> "Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và lần lượt hỏi tôi về từng finding (từ P0, P1 đến P3). Nếu harness đang chạy có công cụ Ask Question (`ask` / `AskUserQuestion`) thì gọi tool đó; nếu không, in menu đánh số và dừng chờ tôi trả lời. Với mỗi finding cung cấp rõ các options:
-> 1. Phương án Accept (chấp nhận rủi ro, phân tích hệ quả).
-> 2. Các phương án Fix cụ thể (tối thiểu, triệt để, kèm lệnh sẽ chạy, kiểm tra tác động phá chức năng nếu có).
-> Chỉ thực thi phương án khi tôi đã chọn."
+> "Dựa trên báo cáo audit vừa hoàn thành, hãy đóng vai trò chuyên gia an ninh hệ thống và lần lượt hỏi tôi về TỪNG finding riêng lẻ (1 finding = 1 câu hỏi, tuyệt đối không gom cụm / batch, theo thứ tự từ P0, P1 đến P3). Nếu harness đang chạy có công cụ Ask Question (`ask` / `AskUserQuestion`) thì BẮT BUỘC gọi tool đó cho từng finding; nếu không, in menu đánh số cho từng finding và dừng chờ tôi trả lời trước khi sang finding tiếp theo. Với mỗi finding cung cấp rõ 3 options:
+> 1. Phương án Accept (chấp nhận rủi ro, phân tích hệ quả của việc không sửa).
+> 2. Phương án Fix tối thiểu (sửa bề mặt, ít rủi ro phá vỡ chức năng, kèm lệnh sẽ chạy và rollback).
+> 3. Phương án Fix triệt để (đóng triệt để rủi ro, kèm lệnh sẽ chạy, cảnh báo tác động phá chức năng nếu có và rollback).
+> Chỉ thực thi phương án khi tôi đã chọn cho finding đó."
 ```
 
 **Phân loại dữ liệu report**: report chứa IP tailnet/LAN, hostname, tên gateway, endpoint nội bộ, đường dẫn credential — coi là **tài liệu nội bộ**. Không push sang remote công khai; nếu repo có nhiều remote, chỉ push nhánh lên remote nội bộ.
