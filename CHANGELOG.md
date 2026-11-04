@@ -3,6 +3,22 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.6.0] — 2026-11-04
+
+### Thêm
+
+- **Phase 18 — Chuỗi cung ứng công cụ dev & credential triển khai**: rút từ bản tin tổng hợp ngày 04/11/2026 (post-mortem Binance, LLMjacking, backdoor qua update channel). Phủ 6 vector mà Phase 1–17 chưa có: provenance installer/bootstrap (Homebrew/scoop/choco, `curl|sh`, profile shell), artifact "bài test" tuyển dụng (Mark-of-the-Web/quarantine, lifecycle script `postinstall`/`postCreateCommand`/`build.rs`), deploy token/kubeconfig prod/`docker auths` kèm câu hỏi quyết định mức ("token + mạng kẻ tấn công có gọi được dịch vụ ký/deploy không?"), service-account key + key LLM (LLMjacking), clipboard history giữ token, update channel (`gpgcheck=0`, `trusted=yes`, job tải về rồi chạy). Giao cho slice B (12 + 18); thứ tự đề xuất `17 → 10 → 12 → 18 → 11 → …`.
+- **Nguyên tắc 10 — CVE/IOC từ nguồn thứ cấp không phải bằng chứng ảnh hưởng**: tin tức/blog/post-mortem chỉ là manh mối, ghi `chưa đối chiếu` tới khi khớp NVD/GHSA/OSV/advisory vendor với version đang cài. Đồng bộ vào `PROMPT.md` (luật 7) và `commands/`.
+- **CVE mapping**: thêm nhóm 6 (AI gateway / LLM proxy / agent runtime — LiteLLM, Ollama, MCP server); luật "vá đã cài ≠ vá có hiệu lực" (pending reboot Linux/Windows); trạng thái `fix.state = not-fixed-in-stable` cho bản vá mới có ở `-proposed`.
+- **Phase 17**: dòng "Mượn quyền qua AI tool dùng chung" — danh tính chạy tool, tách theo user, log hành động của agent con người đọc lại được.
+- **Phase 8**: "credential đã bị sao chép thì cập nhật không cứu được" — gặp bản nhiễm thì rotate toàn bộ, đo lại bằng credential cũ.
+
+### Giới hạn đã biết
+
+- Lệnh Phase 18 **chưa chạy thử trên cả 3 OS** (khác các phase cũ đã verify); skill ghi rõ lỗi lệnh ⇒ "chưa kiểm", không suy ra "sạch".
+- Các CVE-ID nêu trong bản tin nguồn **không** được đưa vào skill vì chưa đối chiếu NVD/OSV (nguyên tắc 10).
+- Bản 1.5.2 (cấm batch finding khi triage) mới được kiểm bằng đọc/grep nội dung skill đã cài, **chưa** kiểm chứng bằng một phiên audit thực tế; cần quan sát một lần triage thật để xác nhận agent hỏi từng finding.
+
 ## [1.5.2] — 2026-11-02
 
 ### Sửa lỗi

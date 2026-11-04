@@ -17,6 +17,7 @@ Bạn là kỹ sư bảo mật đang audit **máy trạm mà bạn đang chạy 
 4. Verify bằng **trạng thái** (query lại port/service/ACL/encryption status), không bằng exit code.
 5. Mọi thay đổi có rollback; thao tác không hoàn tác được phải hỏi tôi trước.
 6. Không probe hạ tầng của tổ chức hoặc máy khác; không dùng thử credential thu được bằng cách gọi API thật. Được phép GET (không kèm credential) tới nguồn dữ liệu công khai mà prompt này chỉ định: GitHub `VERSION`, NVD, MSRC, EPSS, OSV, GHSA, chromiumdash.
+7. CVE/IOC nêu trong tin tức/blog/post-mortem chỉ là manh mối: ghi `chưa đối chiếu` cho tới khi khớp NVD/GHSA/OSV/advisory vendor với **version đang cài**; không kết luận "bị ảnh hưởng" từ một bản tin.
 
 **Bước 0 — Bối cảnh & Kiểm tra phiên bản mới.**
 1. In hostname, OS + version, user, có admin/root không, shell đang dùng.
@@ -44,7 +45,7 @@ Lệnh theo OS: `manage-bde -status` / `fdesetup status` / `lsblk`+`cryptsetup s
 
 **Bước 6 — Repo.** Tìm mọi `.git`, quét config cấp repo + `.gitmodules` (chỉ `grep -l`, không `-o/-h`). Credential trong file **tracked** → xác định `HEAD:<file>`, commit nào đưa vào (`git log -S`), đã push nhánh nào (`git branch -r --contains`) rồi mới kết luận mức.
 
-**Bước 7 — Lượt elevated (sau thu thập, trước report).** Hỏi tôi cho phép chạy **một** script elevated (UAC / sudo) gom: BitLocker/FileVault/LUKS status, TPM/Secure Boot, Defender exclusion + preference, EDR service state, log location, **và mọi mục bị `Access denied` ở Bước 1–6 + Phase 10–17** (shadow copy, auditpol, secedit, AppLocker, quyền private key CA…). Ghi transcript ra temp, verify bằng state, xoá script/log sau (nếu log từng chứa secret → coi như đã lộ, rotate lại).
+**Bước 7 — Lượt elevated (sau thu thập, trước report).** Hỏi tôi cho phép chạy **một** script elevated (UAC / sudo) gom: BitLocker/FileVault/LUKS status, TPM/Secure Boot, Defender exclusion + preference, EDR service state, log location, **và mọi mục bị `Access denied` ở Bước 1–6 + Phase 10–18** (shadow copy, auditpol, secedit, AppLocker, quyền private key CA…). Ghi transcript ra temp, verify bằng state, xoá script/log sau (nếu log từng chứa secret → coi như đã lộ, rotate lại).
 
 **Bước 8 — Report (Bắt buộc Full ngay lập tức, không để chờ hỏi).** Ghi `docs/security/<YYYY-MM-DD>-local-workstation-security-audit.md` tích hợp đầy đủ trong một báo cáo duy nhất:
 1. Metadata (host, OS, quyền, phạm vi).
@@ -68,11 +69,11 @@ Sau mỗi thay đổi, **đo lại bằng đúng phép đo đã dùng để phá
 
 **Bẫy phải tránh (đã cắn thật):** filter hẹp ⇒ false negative · `Get-NetFirewallRule` trả cả rule disabled · `ls -la` trên Windows qua MSYS báo sai ACL · output bị tool redact làm tưởng file chứa `[REDACTED]` · tắt service không đóng port · "không có event log" ≠ "không có telemetry" (Splunk/Wazuh/ManageEngine) · service provisioner bật lại account · cmdlet BitLocker mỗi lần chỉ nhận một protector và **in recovery password ra console** · escrow có thể bị GPO chặn · `-UsedSpaceOnly` để free space plaintext · DENY thắng inherited nhưng chủ sở hữu vẫn đọc được · credential trong file **tracked** thì sửa working tree là không đủ · `git config --get-regexp 'remote.*'` in token.
 
-**Thứ tự chạy** (số Bước là tên mục, không phải thứ tự): Bước 0 → **thu thập** Bước 1–6 **và** Bước bổ sung Phase 10–17 (bên dưới) → Bước 7 lượt elevated → Bước 8 report → Bước 9 triage. Không ghi report trước khi thu thập + elevated xong. Không bỏ bước nào; mục không kiểm được → ghi vào *giới hạn coverage*, không suy đoán.
+**Thứ tự chạy** (số Bước là tên mục, không phải thứ tự): Bước 0 → **thu thập** Bước 1–6 **và** Bước bổ sung Phase 10–18 (bên dưới) → Bước 7 lượt elevated → Bước 8 report → Bước 9 triage. Không ghi report trước khi thu thập + elevated xong. Không bỏ bước nào; mục không kiểm được → ghi vào *giới hạn coverage*, không suy đoán.
 
-**Bước bổ sung — phạm vi attacker-first (Phase 10–17), chạy trong giai đoạn thu thập cùng Bước 1–6, TRƯỚC Bước 7 và Bước 8.** Bước 1–6 phủ cấu hình nhìn thấy được; phần dưới là thứ kẻ tấn công thật sự dùng và thường bị bỏ sót. Finding ở đây phải có trong report và phiên triage. Checklist chi tiết + lệnh 3 OS nằm ở mục *Phạm vi bổ sung — attacker-first (Phase 10–17)* trong `SKILL.md`:
+**Bước bổ sung — phạm vi attacker-first (Phase 10–18), chạy trong giai đoạn thu thập cùng Bước 1–6, TRƯỚC Bước 7 và Bước 8.** Bước 1–6 phủ cấu hình nhìn thấy được; phần dưới là thứ kẻ tấn công thật sự dùng và thường bị bỏ sót. Finding ở đây phải có trong report và phiên triage. Checklist chi tiết + lệnh 3 OS nằm ở mục *Phạm vi bổ sung — attacker-first (Phase 10–18)* trong `SKILL.md`:
 
-**Nếu có tool subagent: chạy 4 slice song song như mục *Chạy multi-subagent* trong `SKILL.md` — A (17+10), B (12), C (11+13), D (14+15+16).** Mỗi prompt con phải copy đủ 7 điều trong hợp đồng (read-only · không in secret · positive control · 3 trạng thái · Access denied ⇒ chưa kiểm · không PoC · output 4 mục). Agent chỉ đề xuất mức; bạn là người duy nhất ghi report, dedupe, và quyết severity theo Phase 7. Không có subagent thì chạy tuần tự 17 → 10 → 12 → 11 → 14 → 13 → 15 → 16 và ghi rõ là đơn luồng.
+**Nếu có tool subagent: chạy 4 slice song song như mục *Chạy multi-subagent* trong `SKILL.md` — A (17+10), B (12+18), C (11+13), D (14+15+16).** Mỗi prompt con phải copy đủ 7 điều trong hợp đồng (read-only · không in secret · positive control · 3 trạng thái · Access denied ⇒ chưa kiểm · không PoC · output 4 mục). Agent chỉ đề xuất mức; bạn là người duy nhất ghi report, dedupe, và quyết severity theo Phase 7. Không có subagent thì chạy tuần tự 17 → 10 → 12 → 18 → 11 → 14 → 13 → 15 → 16 và ghi rõ là đơn luồng.
 
 
 1. **Danh tính**: ai còn trong `authorized_keys`; Credential Manager/Keychain/`secret-tool`; shell history (grep pattern token, không in giá trị); `AutoAdminLogon` + `DefaultPassword` (cleartext); LSA protection / Credential Guard / ptrace_scope; cached logons.
@@ -83,5 +84,6 @@ Sau mỗi thay đổi, **đo lại bằng đúng phép đo đã dùng để phá
 6. **Mạng ngoài listener**: `netsh wlan show profiles` (chỉ tên + auth type; profile `WPA2-Personal` nghĩa là PSK đọc được — chỉ ghi nhận, **không** trích xuất); LLMNR/NetBIOS/mDNS; file `.lnk/.url/.scf` trong repo (NTLM leak); Print Spooler/WebClient/`Search-ms`; proxy/PAC/DoH/split tunnel.
 7. **Vật lý/pre-boot**: khoá màn hình + yêu cầu mật khẩu khi wake; boot order/USB boot; BIOS password; hibernation + Fast Startup; escrow recovery key.
 8. **AI agent surface**: mọi `command` trong `.mcp.json` (chạy binary gì, đường dẫn có ghi được); hook agent (`PreToolUse`…); `approvalMode`/allow-list; transcript + agent DB (secret user dán vào); daemon loopback không auth (CDP, orchestrator); autostart của agent.
+9. **Chuỗi cung ứng công cụ dev & credential triển khai**: provenance installer (Homebrew `remote get-url origin`, `brew tap`, `scoop bucket list`, `choco source list`) + `curl|sh` trong history + profile shell bị chèn; artifact "bài test" tuyển dụng (archive/repo tải 30 ngày, Mark-of-the-Web/quarantine, `postinstall`/`postCreateCommand`/`build.rs` — chỉ đọc, không chạy); deploy token/kubeconfig prod/`docker config auths`/service-account JSON/key LLM (chỉ tên + độ dài + file; hỏi: token này + mạng kẻ tấn công có gọi được dịch vụ ký/deploy không?); clipboard history; update channel (`gpgcheck=0`, `trusted=yes`, job tải về rồi chạy). Lệnh chưa chạy thử đủ 3 OS: lỗi ⇒ "chưa kiểm". Đã chạy bản nhiễm ⇒ rotate toàn bộ credential, cập nhật không đủ.
 
 Mỗi mục: nếu **chưa đo** thì ghi "chưa kiểm", tuyệt đối không ghi "không có".

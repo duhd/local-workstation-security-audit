@@ -119,7 +119,7 @@ Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\comm
 
 After copying, restart the harness (or reload skills) so the command appears.
 
-> **For an agent reading this:** next step is `SKILL.md` — follow its *Thứ tự thực thi (full audit)* section: Step 0 → collect Phase 1–6 (posture) in parallel with Phase 10–17 (attacker-first) → one elevated pass → Phase 7 → Phase 9 report → Phase 8 triage. A complete pass is **all 17 phases**; never run only half. With ~30 minutes, do **Phase 1 (patch/disk encryption), 3 (network exposure), 5 (browser)** first, then **17 → 10 → 12** — that set surfaces the heaviest findings on a dev machine. Read-only by default. Never print secrets. Ask the user to choose an option per finding before changing anything on the machine.
+> **For an agent reading this:** next step is `SKILL.md` — follow its *Thứ tự thực thi (full audit)* section: Step 0 → collect Phase 1–6 (posture) in parallel with Phase 10–18 (attacker-first) → one elevated pass → Phase 7 → Phase 9 report → Phase 8 triage. A complete pass is **all 18 phases**; never run only half. With ~30 minutes, do **Phase 1 (patch/disk encryption), 3 (network exposure), 5 (browser)** first, then **17 → 10 → 12 → 18** — that set surfaces the heaviest findings on a dev machine. Read-only by default. Never print secrets. Ask the user to choose an option per finding before changing anything on the machine.
 
 ---
 
@@ -129,7 +129,7 @@ After copying, restart the harness (or reload skills) so the command appears.
 |---|---|
 | `README.md` | Vietnamese introduction |
 | `README.en.md` | English introduction (this file) |
-| `SKILL.md` | The full skill — evidence rules, 3-OS command matrix, severity anchors, remediation playbooks, the "traps that bit" table, and **Phase 10–17** (attacker-first) |
+| `SKILL.md` | The full skill — evidence rules, 3-OS command matrix, severity anchors, remediation playbooks, the "traps that bit" table, and **Phase 10–18** (attacker-first) |
 | `PROMPT.md` | Prompt to paste into any agent, no skill loader needed |
 | `commands/local-pc-security-audit.md` | Slash-command entry point |
 | `.gitattributes` | LF normalisation so it works on macOS/Linux |
@@ -140,14 +140,15 @@ After copying, restart the harness (or reload skills) so the command appears.
 
 **Phase 1–9 — posture.** OS patch level (via update searcher, not a KB list) · disk encryption · TPM/Secure Boot/SIP · firewall + listeners + overlay-network ACL · credentials at rest · persistence · browser profiles, extensions, remote-access hosts · repos and git history · **application patch gap + CVE mapping** (NVD/MSRC/EPSS, high-risk subset only: browser, remote-access host, OS component, VPN, file parsers) · severity · remediation · report.
 
-**Phase 10–17 — attacker-first.** The part usually missed, because it appears in no CIS checklist. Four questions it answers:
+**Phase 10–18 — attacker-first.** The part usually missed, because it appears in no CIS checklist. Five questions it answers:
 
 - **Who can still log into this machine?** — `authorized_keys`, Credential Manager/Keychain, shell history, `AutoAdminLogon`, LSA protection.
 - **How would someone else's code run?** — PATH hijack, service path/DACL, `SeImpersonate`, git hooks, package-manager registry, WSL/docker, extension `update_url`.
 - **Where do secrets live after "deletion"?** — tfstate, crash dumps, editor backups, notebook output, shadow copies, `git fsck`, cloud-synced folders.
 - **What can still be detected, and which channels bypass listeners?** — audit policy, PowerShell 4104, Sysmon/AMSI, forwarder health; Wi-Fi PSK, LLMNR/NetBIOS, `.lnk/.scf` files in repos, spooler/WebDAV.
+- **What is the way in through the people who build the product?** — trojanized installers (Homebrew/scoop/choco), fake-job "assignments", hijacked update channels, deploy tokens/service-account keys/LLM keys on a personal machine, tokens left in clipboard history.
 
-The full 8-phase breakdown with 3-OS commands lives in the *attacker-first* section of [`SKILL.md`](SKILL.md) — that is the only copy to update when a phase is added.
+The full 9-phase breakdown with 3-OS commands lives in the *attacker-first* section of [`SKILL.md`](SKILL.md) — that is the only copy to update when a phase is added.
 
 ### Proactive Workstation Hardening (OS-Customized)
 

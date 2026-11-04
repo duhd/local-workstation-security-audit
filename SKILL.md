@@ -18,12 +18,14 @@ Audit **máy trạm** (không phải codebase) trên Windows / macOS / Linux. M�
 7. **Sửa gì cũng phải có rollback**, ưu tiên thay đổi nhỏ nhất tại điểm quyết định cuối.
 8. **Đổi gì trên máy thì đồng bộ vào SSOT** nếu thay đổi được quản lý bằng IaC/GPO.
 9. **Bắt buộc Scan CVE (Mandatory CVE Scanning)**: Full audit không được dừng ở patch-gap hay version check. Bắt buộc đối chiếu phiên bản cài đặt của OS, Browser, Remote-Access host, và phần mềm rủi ro cao với cơ sở dữ liệu lỗ hổng (NVD, MSRC, CISA KEV, EPSS) theo mô hình Grype pipeline (catalog → match → enrich → policy → report).
+10. **CVE/IOC từ nguồn thứ cấp không phải bằng chứng ảnh hưởng.** Bản tin, blog, post-mortem, báo cáo vendor chỉ là *manh mối*. Ghi trạng thái `chưa đối chiếu` cho tới khi khớp NVD/GHSA/OSV/advisory chính thức của vendor với **version đang cài**; không viết "máy bị ảnh hưởng" từ một bản tin. Version nằm trong dải được nêu ⇒ finding "cần xác minh", chưa phải "đã bị khai thác". Không đưa CVE-ID chưa xác minh vào skill hay report như sự thật.
+
 ## Chế độ chạy
 
 | Chế độ | Khi nào | Việc phải làm |
 |---|---|---|
 | **Guidance** | Hỏi một câu bảo mật, review một mục, triage | Chỉ dùng phần liên quan; không tạo report |
-| **Full audit** | "đánh giá bảo mật máy", "audit toàn bộ" | Chạy đủ Phase 1→17 (bắt buộc kèm scan CVE phần mềm & browser) theo *Thứ tự thực thi* bên dưới, ghi report |
+| **Full audit** | "đánh giá bảo mật máy", "audit toàn bộ" | Chạy đủ Phase 1→18 (bắt buộc kèm scan CVE phần mềm & browser) theo *Thứ tự thực thi* bên dưới, ghi report |
 
 Trước khi bắt đầu: chốt **host, OS/version, user chạy, có quyền admin không, phạm vi** (máy này / thêm ổ khác / thêm repo).
 
@@ -32,13 +34,13 @@ Trước khi bắt đầu: chốt **host, OS/version, user chạy, có quyền a
 Số Phase là tên mục, **không** phải thứ tự chạy. Thứ tự đúng:
 
 1. **Bước 0** — kiểm tra phiên bản skill.
-2. **Thu thập** — Phase 1–6 (parent tự chạy) **song song** Phase 10–17 (slice A–D, xem *Chạy multi-subagent*). Chỉ đọc, không sửa.
+2. **Thu thập** — Phase 1–6 (parent tự chạy) **song song** Phase 10–18 (slice A–D, xem *Chạy multi-subagent*). Chỉ đọc, không sửa.
 3. **Lượt elevated** — gom mọi mục `Access denied` của bước 2 vào 1 script, xin phép user chạy 1 lần.
-4. **Phase 7** — xếp mức toàn bộ finding (cả 1–6 lẫn 10–17).
+4. **Phase 7** — xếp mức toàn bộ finding (cả 1–6 lẫn 10–18).
 5. **Phase 9** — ghi report đầy đủ.
 6. **Phase 8** — triage từng finding với user, áp dụng, đo lại, cập nhật mục *Trạng thái khắc phục* trong report.
 
-Không ghi report trước khi bước 2–3 xong: finding của Phase 10–17 phải nằm trong report và trong phiên triage.
+Không ghi report trước khi bước 2–3 xong: finding của Phase 10–18 phải nằm trong report và trong phiên triage.
 
 ### Kiểm tra phiên bản mới nhất & Hỏi cập nhật (Bước 0)
 
@@ -84,12 +86,12 @@ reg query <key> /s
 
 ### Chạy multi-subagent (mặc định cho full audit)
 
-17 phase chạy tuần tự sẽ đốt context và dễ bỏ sót. Parent tự chạy **Phase 1–6** (cần kết quả để làm CVE mapping và dedupe), còn **Phase 10–17** chia thành **4 slice độc lập**, mỗi subagent một slice, **tối đa 4 agent đồng thời**:
+18 phase chạy tuần tự sẽ đốt context và dễ bỏ sót. Parent tự chạy **Phase 1–6** (cần kết quả để làm CVE mapping và dedupe), còn **Phase 10–18** chia thành **4 slice độc lập**, mỗi subagent một slice, **tối đa 4 agent đồng thời**:
 
 | Slice | Phase | Nội dung |
 |---|---|---|
 | **A** | 17 + 10 | bề mặt AI agent (MCP `command`/hook/`approvalMode`/transcript/daemon loopback) + danh tính (authorized_keys, Credential Manager/Keychain, shell history, auto-logon, LSA/Credential Guard, cached logons, `klist`) |
-| **B** | 12 | secret trong artifact: tfstate/tfplan/tfvars, crash dump, editor backup, notebook output, Postman/Insomnia/HAR, Recycle Bin, shadow copy, `git fsck`/`git stash`, thư mục cloud sync |
+| **B** | 12 + 18 | secret trong artifact: tfstate/tfplan/tfvars, crash dump, editor backup, notebook output, Postman/Insomnia/HAR, Recycle Bin, shadow copy, `git fsck`/`git stash`, thư mục cloud sync + chuỗi cung ứng công cụ dev & credential triển khai (provenance installer Homebrew/scoop/choco, artifact "bài test" tuyển dụng, deploy token/service-account key/LLM key, update channel, clipboard) |
 | **C** | 11 + 13 | thực thi code & privesc (PATH writable, service path/DACL, `SeImpersonate`, `AlwaysInstallElevated`, git hook/`include.path`/`insteadOf`, registry package manager, WSL/docker, native messaging, `.vscode/tasks.json`) + kênh tin cậy (root CA lạ, updater + quyền ghi binary, `winget source`, AppLocker/WDAC) |
 | **D** | 14 + 15 + 16 | năng lực phát hiện (audit policy, PS 4104, Sysmon/AMSI, log retention/1102, forwarder health) + mạng ngoài listener (Wi-Fi auth type, LLMNR/NetBIOS/mDNS, `.lnk/.scf` trong repo, spooler/WebClient, proxy/PAC/DoH) + vật lý/pre-boot (auto-login, screen lock, boot order, hibernation, escrow) |
 
@@ -115,7 +117,7 @@ Giao theo thứ tự blast radius **A → B → C → D**, nhưng chạy song so
 
 **Cấm**: hai agent cùng sửa một file; agent tự apply fix (mọi mutation vẫn qua Phase 8 + quyết định của user); agent chạy phase ngoài slice của mình (trùng lặp ⇒ tốn và lệch số liệu).
 
-**Không có tool subagent?** Chạy tuần tự Phase 1–6, rồi Phase 10–17 theo thứ tự ưu tiên *17 → 10 → 12 → 11 → 14 → 13 → 15 → 16*, và ghi rõ trong report là chạy đơn luồng.
+**Không có tool subagent?** Chạy tuần tự Phase 1–6, rồi Phase 10–18 theo thứ tự ưu tiên *17 → 10 → 12 → 18 → 11 → 14 → 13 → 15 → 16*, và ghi rõ trong report là chạy đơn luồng.
 
 
 ## Phase 1 — Recon & posture
@@ -157,6 +159,7 @@ Không map toàn bộ 500 app đã cài — vô nghĩa và tốn thời gian. Ch
 3. OS component có bản vá tháng (Windows cumulative, driver đồ hoạ);
 4. VPN/proxy client (WARP, Tailscale, OpenVPN);
 5. trình đọc/giải nén file không tin cậy (7-Zip, PDF reader, Office).
+6. AI gateway / LLM proxy / agent runtime (LiteLLM, Ollama, MCP server, framework agent): thường giữ key của nhiều provider và định tuyến cho nhiều người dùng ⇒ một CVE leo quyền ở đây mở khoá mọi key phía sau. Catalog: `pip list --format=json`, `npm ls -g --json`, `docker ps --format '{{.Image}}'`.
 
 Nguồn (chỉ GET, không cần account). Ba biến thể dưới đây **đã chạy thật**; con số là giá trị kỳ vọng để làm positive control:
 
@@ -197,6 +200,9 @@ Rate limit NVD: **5 request / 30 giây** khi không có API key (50 nếu có) �
 - Không chạy PoC, không tải exploit, không thử khai thác để "xác nhận".
 - Không gửi credential/PAT khi gọi API ngoài.
 - Nếu version đang cài cũ hơn nhiều major (như remote-access host lệch 3 major), việc map từng CVE là không cần thiết — kết luận "lệch nhiều major, phải update" đã đủ mạnh và đúng.
+- **Nguồn thứ cấp** (xem nguyên tắc 10): CVE nêu trong tin tức mà chưa tra được NVD/GHSA/OSV ⇒ ghi `chưa đối chiếu`, kèm alias nếu có (OSV có thể resolve qua alias GHSA/PYSEC trước khi NVD cập nhật). Chỉ nâng thành `affected` khi version đang cài thoả dải ảnh hưởng.
+- **Vá đã cài ≠ vá đã có hiệu lực.** Kernel/libc/OpenSSL cần reboot hoặc restart service. Kiểm: Debian/Ubuntu `/var/run/reboot-required`; RHEL `needs-restarting -r`; so `uname -r` với kernel mới nhất đã cài (`rpm -q kernel --last` / `dpkg -l 'linux-image*'`); Windows `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired`. Còn pending reboot ⇒ finding "chưa có hiệu lực", không ghi "đã vá".
+- **Fix chưa có ở kênh stable** (distro mới có bản vá trong `-proposed`/chưa phát hành): ghi `fix.state = not-fixed-in-stable`, nêu biện pháp giảm thiểu (chặn port, tắt tính năng), không ghi "đã vá".
 
 ### Mô hình Grype áp cho máy trạm (5 bước)
 
@@ -373,6 +379,8 @@ Không được tự chọn thay người dùng ở cả hai nhánh. Nếu chạ
 
 Làm ngược thứ tự (sửa file → quên revoke) là lỗi phổ biến nhất.
 
+**Credential đã bị sao chép thì cập nhật không cứu được.** Nếu một bản cài/update nhiễm (installer, updater, plugin) từng chạy trên máy, mọi secret nó đọc được (shadow/SSH key/`my.cnf`/shell history/token trong `.env`) coi như **đã lộ** ⇒ rotate toàn bộ, đo lại bằng credential **cũ** phải fail. Lên bản vá chỉ ngăn lần lây sau.
+
 ### Luật thực thi
 
 1. Việc cần admin → gom vào **một** script, chạy elevated (`Start-Process -Verb RunAs -Wait -PassThru` / `sudo`), `Start-Transcript` ra temp, rồi **đọc log** và verify bằng state.
@@ -516,7 +524,7 @@ Trước khi bàn giao: grep report cho `sk-`, `ghp_`, `ya29.`, `-----BEGIN`, `\
 - Không xoá/đổi file của người khác; không force-push branch đã publish mà chưa được duyệt.
 - Không tuyên bố "đã audit xong toàn bộ" — luôn nêu coverage và phần chưa kiểm.
 
-## Phạm vi bổ sung — attacker-first (Phase 10–17)
+## Phạm vi bổ sung — attacker-first (Phase 10–18)
 
 Phase 1–9 phủ *cấu hình nhìn thấy được*. Phần dưới là những gì kẻ tấn công thật sự dùng trên một máy dev workstation, và thường **bị bỏ sót** vì không nằm trong checklist posture. Chạy **trong bước thu thập**, song song với Phase 1–6 và **trước** Phase 7/9 (xem *Thứ tự thực thi*) — finding ở đây phải vào report và phiên triage. Chế độ Guidance có thể chọn từng mục theo mục tiêu tấn công.
 
@@ -604,11 +612,25 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 | Daemon loopback không auth | CDP (`DevToolsActivePort`), orchestrator/agent daemon cục bộ, MCP HTTP server — bất kỳ process local nào cũng gọi được |
 | **Sandbox Escape qua Automation Browser** | Agent dùng Playwright/Puppeteer với Chromium cache lỗi thời + cờ `--no-sandbox` hoặc process IDE/Terminal được cấp quyền Accessibility (macOS TCC / Windows UI Automation) ⇒ GPU/Renderer escape dẫn tới gõ phím giả lập (mở Spotlight/Run, spawn reverse shell) |
 | Tự chạy khi login | Agent daemon/PWA autostart |
+| Mượn quyền qua AI tool dùng chung | Tool/gateway nội bộ chạy bằng danh tính nào (token của ai, scope, có tách theo user không); nó có đọc được session/credential của người khác không; **log hành động của agent** (ai gọi tool gì) có tồn tại, người đọc lại được, ai xoá được. Nguyên tắc: agent không được có quyền hành động mà con người không đọc lại được log |
+
+### Phase 18 — Chuỗi cung ứng công cụ dev & credential triển khai (đường vào qua người làm ra sản phẩm)
+
+Kẻ tấn công không cần lỗ hổng sản phẩm: nhắm vào máy của kỹ sư — installer bị trộn mã độc, "bài test" tuyển dụng, update channel bị chiếm, token triển khai nằm trên máy cá nhân. Lệnh dưới đây **chưa chạy thử trên cả 3 OS**; lệnh nào lỗi ⇒ ghi "chưa kiểm", không suy diễn "sạch". Chỉ liệt kê và đếm — không chạy script/installer của artifact nghi ngờ, không in value.
+
+| Kẻ tấn công dùng để | Kiểm | Lệnh gợi ý (read-only) |
+|---|---|---|
+| Installer/bootstrap bị trojan hoá | Công cụ cài (Homebrew/scoop/choco/nvm/rustup) trỏ đúng upstream; tap/bucket/source lạ; `curl\|sh` trong history; profile shell bị chèn | `git -C "$(brew --repository)" remote get-url origin \| sed -E 's#://[^@/]+@#://<redacted>@#'` (phải là `https://github.com/Homebrew/brew`); `brew tap`; `scoop bucket list`; `choco source list`; `winget source list`; history: `grep -cE 'curl[^\|]*\|\s*(ba\|z)?sh\|iwr[^\|]*\|\s*iex'` (chỉ đếm); `grep -nE 'eval\|curl\|base64' ~/.zprofile ~/.bashrc` / `$PROFILE` (chỉ số dòng) + mtime |
+| "Bài test/assignment" tuyển dụng (repo hoặc archive chạy code) | Artifact tải về 30 ngày gần đây chưa rõ nguồn; repo mới clone có script tự chạy khi mở/cài | Win `Get-ChildItem ~\Downloads,~\Desktop -Recurse -Include *.zip,*.iso,*.exe,*.msi,*.ps1,*.lnk,*.jar \| ? LastWriteTime -gt (Get-Date).AddDays(-30)` + `Get-Item <f> -Stream Zone.Identifier`; macOS `find ~/Downloads -mtime -30 \( -name '*.dmg' -o -name '*.pkg' -o -name '*.command' -o -name '*.zip' \)` + `xattr -p com.apple.quarantine <f>`; trong repo: `package.json` (`preinstall`/`install`/`postinstall`/`prepare`), `.devcontainer/devcontainer.json` (`initializeCommand`/`postCreateCommand`), `setup.py`/`pyproject.toml` build hook, `build.rs`, `Makefile`, `.mcp.json` + hook agent trong repo lạ |
+| Token triển khai/production nằm trên máy cá nhân | Credential nào gọi thẳng được deploy/signing/registry của production từ máy này; static hay short-lived; có giới hạn nguồn (IP allow-list, mTLS, workload identity) không | `kubectl config get-contexts -o name` (đếm context `prod`); `~/.docker/config.json` → chỉ tên khoá `auths` + `credsStore`; `.npmrc`/`.pypirc`/`~/.terraform.d/credentials.tfrc.json`/`gh` hosts: chỉ ghi có/không + file; `~/.aws/credentials`: tên profile + tiền tố key (`AKIA`=dài hạn, `ASIA`=tạm). **Câu quyết định mức**: có token + mạng của kẻ tấn công ⇒ gọi được dịch vụ ký/deploy không? Static + không TTL + không giới hạn nguồn ⇒ P0/P1 |
+| Service-account key / LLM key bị lộ (LLMjacking) | Key JSON service account và key provider LLM nằm ở đâu, tuổi bao lâu | `grep -rIl --include='*.json' '"type": *"service_account"' <dir>` (chỉ tên file; tuổi = mtime); `GOOGLE_APPLICATION_CREDENTIALS`, `application_default_credentials.json`; `.env*`/env có tên khớp `(OPENAI\|ANTHROPIC\|GEMINI\|AZURE_OPENAI\|MISTRAL\|LITELLM_MASTER)[A-Z_]*KEY` (chỉ tên + độ dài + file). Hạn mức/budget/alert phía provider: **chưa kiểm được từ máy trạm** trừ khi user cung cấp — không gọi API provider bằng key tìm được |
+| Dán token thô vào trang giả (session hijack, vượt cả password và MFA) | Clipboard history/cloud clipboard/clipboard manager giữ token; file JSON token trong Downloads | Win `HKCU:\Software\Microsoft\Clipboard` → `EnableClipboardHistory`; policy `HKLM:\SOFTWARE\Policies\Microsoft\Windows\System` → `AllowClipboardHistory`, `AllowCrossDeviceClipboard`; macOS/Linux `ps aux \| grep -iE 'maccy\|raycast\|alfred\|clipy\|copyq\|klipper'`. Quy tắc: không bao giờ dán JSON chứa `access_token` vào trang web |
+| Update channel bị chiếm (agent bảo mật/panel/hosting tự cập nhật bằng quyền root) | Nguồn update có HTTPS + chữ ký không; job định kỳ tải về rồi thực thi; version so với advisory chính thức của vendor | Debian `grep -rE 'trusted=yes\|allow-insecure' /etc/apt/sources.list /etc/apt/sources.list.d`; RHEL `grep -rE '^gpgcheck=0\|sslverify=0' /etc/yum.repos.d`; `systemctl list-timers`; `grep -rE 'curl\|wget' /etc/cron* /etc/systemd/system \| grep -E '\|\s*(ba)?sh'`; Win `Get-AuthenticodeSignature <updater>`. Version trong dải bị nêu chỉ ở tin tức ⇒ nguyên tắc 10. Đã chạy bản nhiễm ⇒ theo Phase 8, rotate toàn bộ |
 
 **Cách dùng mục này trong report**: ghi rõ mục nào **đã chạy**, mục nào **chưa chạy**. Một danh sách scope không thay thế phép đo — nếu chưa đo thì ghi "chưa kiểm", không ghi "không có".
 
 **Lệnh cần quyền cao (thuộc lượt elevated, đừng chạy ở lượt 1)**: `vssadmin list shadows`, `auditpol /get /category:*`, `sc sdshow <svc>`, `Get-AppLockerPolicy -Effective`, `wevtutil gl <log>`, `Get-CimInstance Win32_Service` khi cần `PathName` đầy đủ của service chạy SYSTEM. Nếu nhận `Access is denied` ⇒ ghi "chưa kiểm (cần elevated)", **không** kết luận "không có shadow copy / không có audit policy".
 
-**Thứ tự chạy đề xuất** (khác thứ tự đánh số, theo blast radius thực tế của một máy dev): **17 → 10 → 12 → 11 → 14 → 13 → 15 → 16**. Lý do: daemon/agent config sai cho phép thực thi không phê duyệt; `authorized_keys` + credential đã lưu là đường vào không cần password; secret trong artifact/tfstate/dump thường đã rời máy; phần còn lại là persistence và phát hiện.
+**Thứ tự chạy đề xuất** (khác thứ tự đánh số, theo blast radius thực tế của một máy dev): **17 → 10 → 12 → 18 → 11 → 14 → 13 → 15 → 16**. Lý do: daemon/agent config sai cho phép thực thi không phê duyệt; `authorized_keys` + credential đã lưu là đường vào không cần password; secret trong artifact/tfstate/dump thường đã rời máy; credential triển khai + chuỗi cung ứng công cụ dev là đường từ máy cá nhân sang production; phần còn lại là persistence và phát hiện.
 
 **Ranh giới**: chỉ liệt kê bề mặt và lệnh kiểm read-only. Không đưa payload, không PoC leo thang, không chạy thử privesc trên máy thật — nếu cần chứng minh, dùng VM cô lập.

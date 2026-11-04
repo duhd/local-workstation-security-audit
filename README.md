@@ -120,7 +120,7 @@ Copy-Item "$env:USERPROFILE\.claude\skills\local-workstation-security-audit\comm
 
 Sau khi copy, khởi động lại harness (hoặc reload skills) để lệnh xuất hiện.
 
-> **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md` và chạy đúng mục *Thứ tự thực thi (full audit)*: Bước 0 → thu thập Phase 1–6 (posture) song song Phase 10–17 (attacker-first) → một lượt elevated → Phase 7 → Phase 9 report → Phase 8 triage. Một lượt đầy đủ là **cả 17 phase**; không có chuyện chỉ chạy một nửa. Nếu chỉ có ~30 phút thì chạy trước **Phase 1 (patch/mã hoá ổ), 3 (exposure mạng), 5 (browser)**, rồi **17 → 10 → 12** — đó là nhóm cho finding nặng nhất trên máy dev. Read-only mặc định. Không in secret. Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
+> **Dành cho agent đang đọc file này:** bước tiếp theo là mở `SKILL.md` và chạy đúng mục *Thứ tự thực thi (full audit)*: Bước 0 → thu thập Phase 1–6 (posture) song song Phase 10–18 (attacker-first) → một lượt elevated → Phase 7 → Phase 9 report → Phase 8 triage. Một lượt đầy đủ là **cả 18 phase**; không có chuyện chỉ chạy một nửa. Nếu chỉ có ~30 phút thì chạy trước **Phase 1 (patch/mã hoá ổ), 3 (exposure mạng), 5 (browser)**, rồi **17 → 10 → 12 → 18** — đó là nhóm cho finding nặng nhất trên máy dev. Read-only mặc định. Không in secret. Trước khi thay đổi bất kỳ thứ gì trên máy, hỏi user chọn phương án cho từng finding.
 
 ---
 
@@ -130,7 +130,7 @@ Sau khi copy, khởi động lại harness (hoặc reload skills) để lệnh x
 |---|---|
 | `README.md` | Bản giới thiệu tiếng Việt (file này) |
 | `README.en.md` | Bản giới thiệu tiếng Anh |
-| `SKILL.md` | Skill đầy đủ — luật bằng chứng, bảng lệnh 3 OS, neo mức độ, playbook remediation, bảng bẫy đã cắn thật, và **Phase 10–17** (attacker-first) |
+| `SKILL.md` | Skill đầy đủ — luật bằng chứng, bảng lệnh 3 OS, neo mức độ, playbook remediation, bảng bẫy đã cắn thật, và **Phase 10–18** (attacker-first) |
 | `PROMPT.md` | Prompt dán thẳng vào agent, không cần skill loader |
 | `commands/local-pc-security-audit.md` | Entry point dạng slash command |
 | `.gitattributes` | Chuẩn hoá LF để dùng được trên macOS/Linux |
@@ -141,14 +141,15 @@ Sau khi copy, khởi động lại harness (hoặc reload skills) để lệnh x
 
 **Phase 1–9 — posture.** Patch OS (bằng update searcher, không bằng danh sách KB) · mã hoá ổ · TPM/Secure Boot/SIP · firewall + listener + ACL mạng overlay · credential at-rest · persistence · browser profile + extension + remote-access host · repo & lịch sử git · **patch gap ứng dụng + CVE mapping** (NVD/MSRC, chỉ nhóm rủi ro cao: browser, remote-access host, OS component, VPN, trình đọc file) · severity · remediation · report.
 
-**Phase 10–17 — attacker-first.** Phần thường bị bỏ sót, vì nó không nằm trong checklist CIS nào. Bốn câu hỏi nó trả lời:
+**Phase 10–18 — attacker-first.** Phần thường bị bỏ sót, vì nó không nằm trong checklist CIS nào. Năm câu hỏi nó trả lời:
 
 - **Ai còn đăng nhập được máy này?** — `authorized_keys`, Credential Manager/Keychain, shell history, `AutoAdminLogon`, LSA protection.
 - **Chạy code của kẻ khác bằng cách nào?** — PATH hijack, service path/DACL, `SeImpersonate`, git hooks, registry package manager, WSL/docker, extension `update_url`.
 - **Secret còn ở đâu sau khi "đã xoá"?** — tfstate, crash dump, editor backup, notebook output, shadow copy, `git fsck`, và thư mục đang sync cloud.
 - **Còn phát hiện được gì, và kênh nào ngoài listener?** — audit policy, PowerShell 4104, Sysmon/AMSI, forwarder health; Wi-Fi PSK, LLMNR/NetBIOS, `.lnk/.scf` trong repo, spooler/WebDAV.
+- **Đường vào qua người làm ra sản phẩm là gì?** — installer bị trộn mã độc (Homebrew/scoop/choco), "bài test" tuyển dụng, update channel bị chiếm, deploy token/service-account key/key LLM nằm trên máy cá nhân, clipboard giữ token.
 
-Danh sách đầy đủ 8 phase kèm lệnh cho cả 3 OS nằm trong mục *Phạm vi bổ sung — attacker-first* của [`SKILL.md`](SKILL.md) — đó là bản duy nhất cần cập nhật khi thêm phase mới.
+Danh sách đầy đủ 9 phase kèm lệnh cho cả 3 OS nằm trong mục *Phạm vi bổ sung — attacker-first* của [`SKILL.md`](SKILL.md) — đó là bản duy nhất cần cập nhật khi thêm phase mới.
 
 ### Hardening chủ động (Customized theo OS)
 
