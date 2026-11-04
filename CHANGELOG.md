@@ -15,8 +15,9 @@ Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 
 ### Giới hạn đã biết
 
-- Phase 18: các mẫu `grep` (mục [1], [4], [6]) đã thử positive + negative control trên GNU grep; **chưa** thử trên BSD grep (macOS), và lệnh PowerShell/`brew`/`scoop`/`kubectl`/`pgrep` chưa chạy thử trên cả 3 OS (khác các phase cũ đã verify). Skill ghi rõ lỗi lệnh ⇒ "chưa kiểm", không suy ra "sạch".
+- Phase 18 đã đo ngày 2026-11-04 trên Windows build 10.0.26300 (kèm positive + negative control): mẫu `grep` [1]/[4]/[6] bằng GNU grep, cột PowerShell của [2]/[5]/[6], `winget source list`, `kubectl config get-contexts`. **Chưa** đo: BSD grep, `xattr`/`spctl`/`pkgutil`/`pgrep` (macOS), `brew`/`scoop`/`choco`, phần Linux (`systemctl`, `/etc/apt`, `/etc/yum.repos.d`), `npm ls -g`. Skill ghi rõ lỗi lệnh ⇒ "chưa kiểm", không suy ra "sạch"; mỗi vector có dòng `CONTROL`.
 - Quá trình kiểm đã loại 2 lỗi regex trước khi phát hành: `\|` trong `grep -E` (khớp thừa/0 kết quả) và `grep -n` trần (in nguyên dòng, vi phạm nguyên tắc 2). Lệnh Phase 18 nay nằm trong khối code, dùng `-e` lặp / `[|]`, chỉ đếm hoặc liệt kê tên file.
+- `description` frontmatter nay nhắc chuỗi cung ứng công cụ dev và credential triển khai để harness route đúng.
 - Các CVE-ID nêu trong bản tin nguồn **không** được đưa vào skill vì chưa đối chiếu NVD/OSV (nguyên tắc 10).
 - Bản 1.5.2 (cấm batch finding khi triage) mới được kiểm bằng đọc/grep nội dung skill đã cài, **chưa** kiểm chứng bằng một phiên audit thực tế; cần quan sát một lần triage thật để xác nhận agent hỏi từng finding.
 

@@ -1,6 +1,6 @@
 ---
 name: local-workstation-security-audit
-description: Use when auditing a personal workstation (Windows/macOS/Linux) for security posture and CVE vulnerabilities — disk encryption, credential at rest, network exposure, persistence, browser, installed software CVEs (NVD/MSRC/EPSS/Grype model), repos. Read-only by default; every finding needs Evidence/Fix/Verify/Rollback and never prints secrets.
+description: Use when auditing a personal workstation (Windows/macOS/Linux) for security posture and CVE vulnerabilities — disk encryption, credential at rest, network exposure, persistence, browser, installed software CVEs (NVD/MSRC/EPSS/Grype model), repos, dev-toolchain supply chain (installer provenance, update channel) and deploy/service-account/LLM credentials on the workstation. Read-only by default; every finding needs Evidence/Fix/Verify/Rollback and never prints secrets.
 ---
 
 # Local Workstation Security Audit
@@ -618,7 +618,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 
 Kẻ tấn công không cần lỗ hổng sản phẩm: nhắm vào máy của kỹ sư — installer bị trộn mã độc, "bài test" tuyển dụng, update channel bị chiếm, token triển khai nằm trên máy cá nhân. Chỉ liệt kê và đếm — không chạy script/installer của artifact nghi ngờ, không in value.
 
-**Độ tin cậy của lệnh**: các mẫu `grep` ở mục [1], [4], [6] đã thử bằng positive + negative control trên GNU grep (Git for Windows). **Chưa** thử trên BSD grep (macOS); các lệnh PowerShell/`brew`/`scoop`/`kubectl`/`pgrep` chưa chạy thử trên cả 3 OS — lệnh lỗi ⇒ ghi "chưa kiểm", không suy diễn "sạch". Kết quả 0 chỉ có nghĩa "sạch" khi positive control cùng kênh trả ≥ 1. Lệnh nằm trong khối code (không escape, chép chạy được). Ghép nhiều mẫu bằng `-e` lặp hoặc `(a|b)` trong `-E`; khớp dấu `|` literal bằng `[|]`. **Không** dùng `\|` trong `grep -E`: đã đo cho kết quả sai (khi thì khớp thừa, khi thì 0 kết quả).
+**Độ tin cậy của lệnh**: mỗi vector có một dòng `CONTROL` — chạy control trước, kết quả 0 chỉ có nghĩa "sạch" khi control cùng kênh trả ≥ 1 (nguyên tắc 3). Đã đo ngày **2026-11-04** trên Windows build 10.0.26300 x64: các mẫu `grep` ở [1], [4], [6] (GNU grep của Git for Windows, có cả mẫu âm: `curl` không pipe, `shasum`, shebang `#!/bin/sh`); cột PowerShell của [2], [5], [6] (listing 30 ngày, `Zone.Identifier` có/không, registry clipboard, `Get-AuthenticodeSignature` — file `.ps1` chưa ký cho `NotSigned`, file không phải PE/script cho `UnknownError`); `winget source list` và `kubectl config get-contexts` chạy được. **Chưa** đo: BSD grep và `xattr`/`spctl`/`pkgutil`/`pgrep` (macOS), `brew`/`scoop`/`choco` (máy đo không cài), `systemctl`/`/etc/apt`/`/etc/yum.repos.d` (Linux), `npm ls -g` — lệnh lỗi ⇒ ghi "chưa kiểm", không suy diễn "sạch". Ghép nhiều mẫu bằng `-e` lặp hoặc `(a|b)` trong `-E`; khớp dấu `|` literal bằng `[|]`. **Không** dùng `\|` trong `grep -E`: đã đo cho kết quả sai (khi thì khớp thừa, khi thì 0 kết quả).
 
 | Kẻ tấn công dùng để | Kiểm |
 |---|---|
@@ -636,6 +636,8 @@ brew tap; scoop bucket list; choco source list; winget source list
 # CHỈ ĐẾM, không dùng `grep -n` trần (in nguyên dòng, có thể chứa token). <hist> = ~/.zsh_history hoặc ~/.bash_history
 grep -cE '(curl|wget)[^|]*[|][[:space:]]*(ba|z)?sh([[:space:]]|$)|iwr[^|]*[|][[:space:]]*iex' <hist>
 grep -c -e 'eval' -e 'curl' -e 'base64' ~/.zprofile ~/.bashrc    # đếm theo từng file; xem thêm mtime bằng stat/ls -l
+# installer chưa ký: macOS `spctl -a -vv <file.pkg>` / `pkgutil --check-signature <file.pkg>`; npm global: `npm ls -g --depth=0` rồi đọc khoá `scripts` (preinstall/install/postinstall) trong `$(npm root -g)/<pkg>/package.json` — liệt kê khoá, không chạy
+# CONTROL [1]: `brew tap` (khi brew có mặt) phải liệt ≥ 1 tap; <hist> phải cho `grep -c .` ≥ 1. Máy không cài brew/scoop/choco ⇒ ghi "không áp dụng", không phải "sạch"
 
 # [2] macOS — artifact gần đây + quarantine
 find ~/Downloads -mtime -30 \( -name '*.dmg' -o -name '*.pkg' -o -name '*.command' -o -name '*.zip' \)
@@ -646,33 +648,40 @@ kubectl config get-contexts -o name          # đếm context chứa "prod"
 # ~/.docker/config.json: chỉ tên khoá `auths` + `credsStore`
 # .npmrc, .pypirc, ~/.terraform.d/credentials.tfrc.json, ~/.config/gh/hosts.yml: chỉ có/không + đường dẫn
 # ~/.aws/credentials: tên profile + tiền tố key (AKIA = dài hạn, ASIA = tạm); không in key
+# CONTROL [3]: `kubectl config get-contexts -o name` phải ≥ 1 (đo 2026-11-04: 2 context); 0 = chưa có kubeconfig hoặc kênh hỏng — phải ghi rõ là cái nào
 
 # [4] Service-account key / LLM key: chỉ tên file (-l)
 grep -rIl --include='*.json' '"type": *"service_account"' <dir>
 grep -rIlE --include='.env*' '(OPENAI|ANTHROPIC|GEMINI|AZURE_OPENAI|MISTRAL|LITELLM_MASTER)[A-Z_]*KEY' <dir>
 # GOOGLE_APPLICATION_CREDENTIALS, application_default_credentials.json: chỉ ghi đường dẫn + mtime
+# CONTROL [4]: tạo file tạm trong <dir> chứa {"type": "service_account"}; lệnh phải liệt đúng file đó, rồi xoá nó
 
 # [5] Clipboard manager đang chạy (macOS/Linux)
 pgrep -il 'maccy|raycast|alfred|clipy|copyq|klipper'
+# CONTROL [5]: `pgrep -il 'bash|zsh|sh'` phải ≥ 1 (chứng minh pgrep chạy được trước khi tin kết quả 0 cho clipboard manager)
 
 # [6] Update channel (Linux) — chỉ liệt kê TÊN FILE (-l): dòng khớp có thể chứa user:pass@ hoặc token
 grep -rl -e 'trusted=yes' -e 'allow-insecure' /etc/apt/sources.list /etc/apt/sources.list.d
 grep -rl -e '^gpgcheck=0' -e 'sslverify=0' /etc/yum.repos.d
 systemctl list-timers
 grep -rlE '(curl|wget)[^|]*[|][[:space:]]*(ba|z)?sh([[:space:]]|$)' /etc/cron* /etc/systemd/system
+# CONTROL [6]: file tạm chứa `trusted=yes` trong thư mục thử phải được liệt (đã đo OK với GNU grep); cron: file tạm chứa dòng tải-rồi-pipe-vào-sh phải được liệt, file chỉ có shebang `#!/bin/sh` thì không
 ```
 
 ```powershell
 # [2] Windows — artifact gần đây + Mark-of-the-Web
 Get-ChildItem ~\Downloads,~\Desktop -Recurse -Include *.zip,*.iso,*.exe,*.msi,*.ps1,*.lnk,*.jar | Where-Object LastWriteTime -gt (Get-Date).AddDays(-30)
 Get-Item <file> -Stream Zone.Identifier       # có stream = đến từ internet
+# CONTROL [2]: file .zip tạo mới trong thư mục thử phải hiện, file sửa ngày cách 90 ngày thì không; `Set-Content -Stream Zone.Identifier` rồi `Get-Item -Stream` phải ra 1, file không stream ra 0 (đã đo OK)
 
 # [5] Clipboard history (lỗi "không tồn tại" = chưa đặt policy/giá trị, không phải lỗi đo)
 Get-ItemProperty 'HKCU:\Software\Microsoft\Clipboard' -Name EnableClipboardHistory
 Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name AllowClipboardHistory,AllowCrossDeviceClipboard
+# CONTROL [5]: đọc được `HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer` (đã đo True). Đo 2026-11-04: EnableClipboardHistory=1; AllowClipboardHistory/AllowCrossDeviceClipboard chưa đặt policy
 
 # [6] Chữ ký binary updater
 Get-AuthenticodeSignature <updater-binary>
+# CONTROL [6]: `Get-AuthenticodeSignature $env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe` phải ra Valid; một file .ps1 chưa ký phải ra NotSigned (đã đo OK)
 ```
 
 **Cách dùng mục này trong report**: ghi rõ mục nào **đã chạy**, mục nào **chưa chạy**. Một danh sách scope không thay thế phép đo — nếu chưa đo thì ghi "chưa kiểm", không ghi "không có".
