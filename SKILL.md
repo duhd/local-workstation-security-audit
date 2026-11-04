@@ -618,7 +618,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 
 Kẻ tấn công không cần lỗ hổng sản phẩm: nhắm vào máy của kỹ sư — installer bị trộn mã độc, "bài test" tuyển dụng, update channel bị chiếm, token triển khai nằm trên máy cá nhân. Chỉ liệt kê và đếm — không chạy script/installer của artifact nghi ngờ, không in value.
 
-**Độ tin cậy của lệnh**: mỗi vector có một dòng `CONTROL` — chạy control trước, kết quả 0 chỉ có nghĩa "sạch" khi control cùng kênh trả ≥ 1 (nguyên tắc 3). Đã đo ngày **2026-11-04** trên Windows build 10.0.26300 x64: các mẫu `grep` ở [1], [4], [6] (GNU grep của Git for Windows, có cả mẫu âm: `curl` không pipe, `shasum`, shebang `#!/bin/sh`); cột PowerShell của [2], [5], [6] (listing 30 ngày, `Zone.Identifier` có/không, registry clipboard, `Get-AuthenticodeSignature` — file `.ps1` chưa ký cho `NotSigned`, file không phải PE/script cho `UnknownError`); `winget source list` và `kubectl config get-contexts` chạy được. **Chưa** đo: BSD grep và `xattr`/`spctl`/`pkgutil`/`pgrep` (macOS), `brew`/`scoop`/`choco` (máy đo không cài), `systemctl`/`/etc/apt`/`/etc/yum.repos.d` (Linux), `npm ls -g` — lệnh lỗi ⇒ ghi "chưa kiểm", không suy diễn "sạch". Ghép nhiều mẫu bằng `-e` lặp hoặc `(a|b)` trong `-E`; khớp dấu `|` literal bằng `[|]`. **Không** dùng `\|` trong `grep -E`: đã đo cho kết quả sai (khi thì khớp thừa, khi thì 0 kết quả).
+**Độ tin cậy của lệnh**: mỗi vector có một dòng `CONTROL` — chạy control trước, kết quả 0 chỉ có nghĩa "sạch" khi control cùng kênh trả ≥ 1 (nguyên tắc 3). Đã đo (ngày 2026-11-04, trên một máy Windows, kèm positive + negative control): các mẫu `grep` ở [1], [4], [6] (GNU grep của Git for Windows, có cả mẫu âm: `curl` không pipe, `shasum`, shebang `#!/bin/sh`); cột PowerShell của [2], [5], [6] (listing 30 ngày, `Zone.Identifier` có/không, registry clipboard, `Get-AuthenticodeSignature` — file `.ps1` chưa ký cho `NotSigned`, file không phải PE/script cho `UnknownError`); `winget source list` và `kubectl config get-contexts` chạy được. **Chưa** đo: BSD grep và `xattr`/`spctl`/`pkgutil`/`pgrep` (macOS), `brew`/`scoop`/`choco` (máy đo không cài), `systemctl`/`/etc/apt`/`/etc/yum.repos.d` (Linux), `npm ls -g` — lệnh lỗi ⇒ ghi "chưa kiểm", không suy diễn "sạch". Ghép nhiều mẫu bằng `-e` lặp hoặc `(a|b)` trong `-E`; khớp dấu `|` literal bằng `[|]`. **Không** dùng `\|` trong `grep -E`: đã đo cho kết quả sai (khi thì khớp thừa, khi thì 0 kết quả). Số liệu của từng máy (số context, giá trị policy) thuộc report nội bộ, không phải control.
 
 | Kẻ tấn công dùng để | Kiểm |
 |---|---|
@@ -648,7 +648,7 @@ kubectl config get-contexts -o name          # đếm context chứa "prod"
 # ~/.docker/config.json: chỉ tên khoá `auths` + `credsStore`
 # .npmrc, .pypirc, ~/.terraform.d/credentials.tfrc.json, ~/.config/gh/hosts.yml: chỉ có/không + đường dẫn
 # ~/.aws/credentials: tên profile + tiền tố key (AKIA = dài hạn, ASIA = tạm); không in key
-# CONTROL [3]: `kubectl config get-contexts -o name` phải ≥ 1 (đo 2026-11-04: 2 context); 0 = chưa có kubeconfig hoặc kênh hỏng — phải ghi rõ là cái nào
+# CONTROL [3]: `kubectl config get-contexts -o name` phải ≥ 1; 0 = chưa có kubeconfig hoặc kênh hỏng — phải ghi rõ là cái nào
 
 # [4] Service-account key / LLM key: chỉ tên file (-l)
 grep -rIl --include='*.json' '"type": *"service_account"' <dir>
@@ -677,7 +677,7 @@ Get-Item <file> -Stream Zone.Identifier       # có stream = đến từ interne
 # [5] Clipboard history (lỗi "không tồn tại" = chưa đặt policy/giá trị, không phải lỗi đo)
 Get-ItemProperty 'HKCU:\Software\Microsoft\Clipboard' -Name EnableClipboardHistory
 Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name AllowClipboardHistory,AllowCrossDeviceClipboard
-# CONTROL [5]: đọc được `HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer` (đã đo True). Đo 2026-11-04: EnableClipboardHistory=1; AllowClipboardHistory/AllowCrossDeviceClipboard chưa đặt policy
+# CONTROL [5]: đọc được `HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer` ⇒ kênh đo registry OK. Giá trị `EnableClipboardHistory`/policy được đặt hay không đặt là finding, không phải control: "chưa đặt policy" không có nghĩa "không có clipboard history"
 
 # [6] Chữ ký binary updater
 Get-AuthenticodeSignature <updater-binary>
