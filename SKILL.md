@@ -616,16 +616,64 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 
 ### Phase 18 — Chuỗi cung ứng công cụ dev & credential triển khai (đường vào qua người làm ra sản phẩm)
 
-Kẻ tấn công không cần lỗ hổng sản phẩm: nhắm vào máy của kỹ sư — installer bị trộn mã độc, "bài test" tuyển dụng, update channel bị chiếm, token triển khai nằm trên máy cá nhân. Lệnh dưới đây **chưa chạy thử trên cả 3 OS**; lệnh nào lỗi ⇒ ghi "chưa kiểm", không suy diễn "sạch". Chỉ liệt kê và đếm — không chạy script/installer của artifact nghi ngờ, không in value.
+Kẻ tấn công không cần lỗ hổng sản phẩm: nhắm vào máy của kỹ sư — installer bị trộn mã độc, "bài test" tuyển dụng, update channel bị chiếm, token triển khai nằm trên máy cá nhân. Chỉ liệt kê và đếm — không chạy script/installer của artifact nghi ngờ, không in value.
 
-| Kẻ tấn công dùng để | Kiểm | Lệnh gợi ý (read-only) |
-|---|---|---|
-| Installer/bootstrap bị trojan hoá | Công cụ cài (Homebrew/scoop/choco/nvm/rustup) trỏ đúng upstream; tap/bucket/source lạ; `curl\|sh` trong history; profile shell bị chèn | `git -C "$(brew --repository)" remote get-url origin \| sed -E 's#://[^@/]+@#://<redacted>@#'` (phải là `https://github.com/Homebrew/brew`); `brew tap`; `scoop bucket list`; `choco source list`; `winget source list`; history: `grep -cE 'curl[^\|]*\|\s*(ba\|z)?sh\|iwr[^\|]*\|\s*iex'` (chỉ đếm); `grep -nE 'eval\|curl\|base64' ~/.zprofile ~/.bashrc` / `$PROFILE` (chỉ số dòng) + mtime |
-| "Bài test/assignment" tuyển dụng (repo hoặc archive chạy code) | Artifact tải về 30 ngày gần đây chưa rõ nguồn; repo mới clone có script tự chạy khi mở/cài | Win `Get-ChildItem ~\Downloads,~\Desktop -Recurse -Include *.zip,*.iso,*.exe,*.msi,*.ps1,*.lnk,*.jar \| ? LastWriteTime -gt (Get-Date).AddDays(-30)` + `Get-Item <f> -Stream Zone.Identifier`; macOS `find ~/Downloads -mtime -30 \( -name '*.dmg' -o -name '*.pkg' -o -name '*.command' -o -name '*.zip' \)` + `xattr -p com.apple.quarantine <f>`; trong repo: `package.json` (`preinstall`/`install`/`postinstall`/`prepare`), `.devcontainer/devcontainer.json` (`initializeCommand`/`postCreateCommand`), `setup.py`/`pyproject.toml` build hook, `build.rs`, `Makefile`, `.mcp.json` + hook agent trong repo lạ |
-| Token triển khai/production nằm trên máy cá nhân | Credential nào gọi thẳng được deploy/signing/registry của production từ máy này; static hay short-lived; có giới hạn nguồn (IP allow-list, mTLS, workload identity) không | `kubectl config get-contexts -o name` (đếm context `prod`); `~/.docker/config.json` → chỉ tên khoá `auths` + `credsStore`; `.npmrc`/`.pypirc`/`~/.terraform.d/credentials.tfrc.json`/`gh` hosts: chỉ ghi có/không + file; `~/.aws/credentials`: tên profile + tiền tố key (`AKIA`=dài hạn, `ASIA`=tạm). **Câu quyết định mức**: có token + mạng của kẻ tấn công ⇒ gọi được dịch vụ ký/deploy không? Static + không TTL + không giới hạn nguồn ⇒ P0/P1 |
-| Service-account key / LLM key bị lộ (LLMjacking) | Key JSON service account và key provider LLM nằm ở đâu, tuổi bao lâu | `grep -rIl --include='*.json' '"type": *"service_account"' <dir>` (chỉ tên file; tuổi = mtime); `GOOGLE_APPLICATION_CREDENTIALS`, `application_default_credentials.json`; `.env*`/env có tên khớp `(OPENAI\|ANTHROPIC\|GEMINI\|AZURE_OPENAI\|MISTRAL\|LITELLM_MASTER)[A-Z_]*KEY` (chỉ tên + độ dài + file). Hạn mức/budget/alert phía provider: **chưa kiểm được từ máy trạm** trừ khi user cung cấp — không gọi API provider bằng key tìm được |
-| Dán token thô vào trang giả (session hijack, vượt cả password và MFA) | Clipboard history/cloud clipboard/clipboard manager giữ token; file JSON token trong Downloads | Win `HKCU:\Software\Microsoft\Clipboard` → `EnableClipboardHistory`; policy `HKLM:\SOFTWARE\Policies\Microsoft\Windows\System` → `AllowClipboardHistory`, `AllowCrossDeviceClipboard`; macOS/Linux `ps aux \| grep -iE 'maccy\|raycast\|alfred\|clipy\|copyq\|klipper'`. Quy tắc: không bao giờ dán JSON chứa `access_token` vào trang web |
-| Update channel bị chiếm (agent bảo mật/panel/hosting tự cập nhật bằng quyền root) | Nguồn update có HTTPS + chữ ký không; job định kỳ tải về rồi thực thi; version so với advisory chính thức của vendor | Debian `grep -rE 'trusted=yes\|allow-insecure' /etc/apt/sources.list /etc/apt/sources.list.d`; RHEL `grep -rE '^gpgcheck=0\|sslverify=0' /etc/yum.repos.d`; `systemctl list-timers`; `grep -rE 'curl\|wget' /etc/cron* /etc/systemd/system \| grep -E '\|\s*(ba)?sh'`; Win `Get-AuthenticodeSignature <updater>`. Version trong dải bị nêu chỉ ở tin tức ⇒ nguyên tắc 10. Đã chạy bản nhiễm ⇒ theo Phase 8, rotate toàn bộ |
+**Độ tin cậy của lệnh**: các mẫu `grep` ở mục [1], [4], [6] đã thử bằng positive + negative control trên GNU grep (Git for Windows). **Chưa** thử trên BSD grep (macOS); các lệnh PowerShell/`brew`/`scoop`/`kubectl`/`pgrep` chưa chạy thử trên cả 3 OS — lệnh lỗi ⇒ ghi "chưa kiểm", không suy diễn "sạch". Kết quả 0 chỉ có nghĩa "sạch" khi positive control cùng kênh trả ≥ 1. Lệnh nằm trong khối code (không escape, chép chạy được). Ghép nhiều mẫu bằng `-e` lặp hoặc `(a|b)` trong `-E`; khớp dấu `|` literal bằng `[|]`. **Không** dùng `\|` trong `grep -E`: đã đo cho kết quả sai (khi thì khớp thừa, khi thì 0 kết quả).
+
+| Kẻ tấn công dùng để | Kiểm |
+|---|---|
+| [1] Installer/bootstrap bị trojan hoá | Công cụ cài (Homebrew/scoop/choco/nvm/rustup) trỏ đúng upstream; tap/bucket/source lạ; lệnh tải-rồi-chạy-ngay (curl/iwr đẩy thẳng vào sh/iex) trong history; profile shell bị chèn dòng `eval`/`curl`/`base64` |
+| [2] "Bài test/assignment" tuyển dụng (repo hoặc archive chạy code) | Artifact tải về 30 ngày gần đây chưa rõ nguồn (Mark-of-the-Web / quarantine); repo mới clone có script tự chạy khi mở/cài: `package.json` (`preinstall`/`install`/`postinstall`/`prepare`), `.devcontainer/devcontainer.json` (`initializeCommand`/`postCreateCommand`), `setup.py`/`pyproject.toml`, `build.rs`, `Makefile`, `.mcp.json` + hook agent trong repo lạ — chỉ đọc, không chạy |
+| [3] Token triển khai/production nằm trên máy cá nhân | Credential nào gọi thẳng được deploy/signing/registry của production từ máy này; static hay short-lived; có giới hạn nguồn (IP allow-list, mTLS, workload identity) không. **Câu quyết định mức**: có token + mạng của kẻ tấn công ⇒ gọi được dịch vụ ký/deploy không? Static + không TTL + không giới hạn nguồn ⇒ P0/P1 |
+| [4] Service-account key / LLM key bị lộ (LLMjacking) | Key JSON service account và key provider LLM nằm ở đâu, tuổi bao lâu (mtime). Hạn mức/budget/alert phía provider: **chưa kiểm được từ máy trạm** trừ khi user cung cấp — không gọi API provider bằng key tìm được |
+| [5] Dán token thô vào trang giả (session hijack, vượt cả password và MFA) | Clipboard history/cloud clipboard/clipboard manager giữ token; file JSON token trong Downloads. Quy tắc: không bao giờ dán JSON chứa `access_token` vào trang web |
+| [6] Update channel bị chiếm (agent bảo mật/panel/hosting tự cập nhật bằng quyền root) | Nguồn update có HTTPS + chữ ký không; job định kỳ tải về rồi thực thi; version so với advisory chính thức của vendor (chỉ thấy ở tin tức ⇒ nguyên tắc 10). Đã chạy bản nhiễm ⇒ theo Phase 8, rotate toàn bộ |
+
+```bash
+# [1] Installer/bootstrap
+git -C "$(brew --repository)" remote get-url origin | sed -E 's#://[^@/]+@#://<redacted>@#'   # phải là https://github.com/Homebrew/brew
+brew tap; scoop bucket list; choco source list; winget source list
+# CHỈ ĐẾM, không dùng `grep -n` trần (in nguyên dòng, có thể chứa token). <hist> = ~/.zsh_history hoặc ~/.bash_history
+grep -cE '(curl|wget)[^|]*[|][[:space:]]*(ba|z)?sh([[:space:]]|$)|iwr[^|]*[|][[:space:]]*iex' <hist>
+grep -c -e 'eval' -e 'curl' -e 'base64' ~/.zprofile ~/.bashrc    # đếm theo từng file; xem thêm mtime bằng stat/ls -l
+
+# [2] macOS — artifact gần đây + quarantine
+find ~/Downloads -mtime -30 \( -name '*.dmg' -o -name '*.pkg' -o -name '*.command' -o -name '*.zip' \)
+xattr -p com.apple.quarantine <file>
+
+# [3] Credential triển khai: chỉ tên/đếm/có-không, KHÔNG in value
+kubectl config get-contexts -o name          # đếm context chứa "prod"
+# ~/.docker/config.json: chỉ tên khoá `auths` + `credsStore`
+# .npmrc, .pypirc, ~/.terraform.d/credentials.tfrc.json, ~/.config/gh/hosts.yml: chỉ có/không + đường dẫn
+# ~/.aws/credentials: tên profile + tiền tố key (AKIA = dài hạn, ASIA = tạm); không in key
+
+# [4] Service-account key / LLM key: chỉ tên file (-l)
+grep -rIl --include='*.json' '"type": *"service_account"' <dir>
+grep -rIlE --include='.env*' '(OPENAI|ANTHROPIC|GEMINI|AZURE_OPENAI|MISTRAL|LITELLM_MASTER)[A-Z_]*KEY' <dir>
+# GOOGLE_APPLICATION_CREDENTIALS, application_default_credentials.json: chỉ ghi đường dẫn + mtime
+
+# [5] Clipboard manager đang chạy (macOS/Linux)
+pgrep -il 'maccy|raycast|alfred|clipy|copyq|klipper'
+
+# [6] Update channel (Linux) — chỉ liệt kê TÊN FILE (-l): dòng khớp có thể chứa user:pass@ hoặc token
+grep -rl -e 'trusted=yes' -e 'allow-insecure' /etc/apt/sources.list /etc/apt/sources.list.d
+grep -rl -e '^gpgcheck=0' -e 'sslverify=0' /etc/yum.repos.d
+systemctl list-timers
+grep -rlE '(curl|wget)[^|]*[|][[:space:]]*(ba|z)?sh([[:space:]]|$)' /etc/cron* /etc/systemd/system
+```
+
+```powershell
+# [2] Windows — artifact gần đây + Mark-of-the-Web
+Get-ChildItem ~\Downloads,~\Desktop -Recurse -Include *.zip,*.iso,*.exe,*.msi,*.ps1,*.lnk,*.jar | Where-Object LastWriteTime -gt (Get-Date).AddDays(-30)
+Get-Item <file> -Stream Zone.Identifier       # có stream = đến từ internet
+
+# [5] Clipboard history (lỗi "không tồn tại" = chưa đặt policy/giá trị, không phải lỗi đo)
+Get-ItemProperty 'HKCU:\Software\Microsoft\Clipboard' -Name EnableClipboardHistory
+Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name AllowClipboardHistory,AllowCrossDeviceClipboard
+
+# [6] Chữ ký binary updater
+Get-AuthenticodeSignature <updater-binary>
+```
 
 **Cách dùng mục này trong report**: ghi rõ mục nào **đã chạy**, mục nào **chưa chạy**. Một danh sách scope không thay thế phép đo — nếu chưa đo thì ghi "chưa kiểm", không ghi "không có".
 
