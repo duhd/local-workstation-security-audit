@@ -3,6 +3,34 @@
 Mọi thay đổi đáng chú ý của skill này được ghi ở đây.
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [SemVer](https://semver.org/lang/vi/).
 
+## [1.7.0] — 2026-11-16
+
+Rút từ một phiên full audit thực tế trên Windows 11 (chạy đủ Phase 0–18, một lượt elevated, triage từng finding). Chỉ đưa vào các điều đã đo trong phiên đó.
+
+### Sửa (chống finding giả và lệnh sai)
+
+- **PATH (Phase 11)**: đọc PATH từ registry (Machine rồi User, `DoNotExpandEnvironmentNames`), không đọc `$env:PATH` của process: shell/harness có thể chèn thêm thư mục và tạo finding "user-writable đứng trước System32" giả.
+- **Credential Guard (Phase 10)**: `LsaCfgFlags`/registry là cấu hình; state chạy là `Win32_DeviceGuard.SecurityServicesRunning` (`1` = Credential Guard, `2` = HVCI).
+- **Defender (Phase 1)**: đo `AMRunningMode`; `SxS Passive Mode` khi có AV bên thứ ba thì `RealTimeProtectionEnabled=False` là bình thường.
+- **Passphrase SSH (Phase 2)**: thay probe `ssh-keygen -y -P ""` + nhánh `|| echo ok` bằng vòng lặp 3 trạng thái (`HAS_PASSPHRASE(PEM)` / `NO_PASSPHRASE` / `UNKNOWN`) chạy trong bash. Đã đo với 4 key tạm: từ PowerShell 5.1 cùng lệnh thoát 1 cả với key không passphrase (kết quả sai); chưa xác định nguyên nhân. Key OpenSSH có passphrase ra `UNKNOWN` vì không có chữ `ENCRYPTED`.
+- **CVE (Phase 1)**: `cpeName` có thể trả CVE mà sản phẩm chỉ nằm ở node `"vulnerable": false`; lọc MSRC theo title cho 0 kết quả giả; nguồn bản mới nhất của Edge là `edgeupdates.microsoft.com` (`winget show Microsoft.Edge` trả bản thấp hơn bản đang cài); glob tag hẹp không chứng minh là bản mới nhất.
+
+### Thêm
+
+- **Phase 8 — luật thực thi 6–9**: fix không hoàn tác phải đo trước và ghi hash/thumbprint; đọc ADR/AGENTS.md của repo trước khi đề xuất đổi kiến trúc; ghi nhãn "một phần"/"chờ elevated"; backup chỉ lưu ACL/metadata, không lưu nội dung secret.
+- **Phase 8 — playbook**: `icacls /save` đặt tên theo hash đường dẫn; không dựa vào `icacls /restore` khi không elevated (đã đo lỗi); đo ACL gốc trước khi siết (template có thể nới quyền); thứ tự gỡ quyền thừa kế; `wevtutil sl Security /rt:true /ab:true`; fallback dọn Recycle Bin qua `Shell.Application`.
+- **Phase 9**: yêu cầu cho script elevated (kiểm `IsAdmin`, giữ raw output trước khi lọc, control từng nguồn, xóa script sau khi chạy); đo lại từ phiên không elevated; cột trạng thái khắc phục có nhãn "một phần"/"chờ elevated".
+- **Phase 12**: shadow copy đọc được từ phiên không elevated qua `\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopyN`; xóa/đổi ACL file không xóa bản cũ trong đó.
+- **Chạy multi-subagent**: slice kết luận mâu thuẫn thì parent đo lại; job nền báo `failed` thì đọc lại trước khi ghi "đã kiểm".
+- **Nguyên tắc 2 và hợp đồng subagent**: redact theo tiền tố nhà cung cấp, không chỉ `token=`/`key=`.
+- **Bảng bẫy**: 5 dòng mới (PATH process, cấu hình vs state, shadow copy, probe passphrase, so sánh key trong vault).
+
+### Giới hạn đã biết
+
+- Các luật và lệnh mới chưa được kiểm chứng trên phiên audit thứ hai hay trên macOS/Linux; phần lớn số đo là Windows PowerShell 5.1.
+- Vòng lặp passphrase đã chạy với 4 key tạm và 3 key thật (bash trên Windows); chưa chạy trên macOS/Linux.
+- Không đưa vào: các điều chưa có control (`Get-Content` không `-Raw` làm hỏng PEM; `/remove:g` thất bại âm thầm).
+
 ## [1.6.0] — 2026-11-04
 
 ### Thêm

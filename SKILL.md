@@ -10,7 +10,7 @@ Audit **máy trạm** (không phải codebase) trên Windows / macOS / Linux. M�
 ## Nguyên tắc bất biến
 
 1. **Read-only trước, mutate sau.** Chỉ thay đổi hệ thống khi user chọn phương án cho từng finding.
-2. **Không in secret ra output.** Chỉ ghi *tên biến + độ dài + vị trí*. Nếu buộc phải đọc giá trị (vd recovery key), ghi ra file ACL chặt, không echo. Lệnh nào có thể in value (`git config --get-regexp remote.*`, `git remote -v`, `manage-bde -status`) phải redact ngay trong pipeline.
+2. **Không in secret ra output.** Chỉ ghi *tên biến + độ dài + vị trí*. Nếu buộc phải đọc giá trị (vd recovery key), ghi ra file ACL chặt, không echo. Lệnh nào có thể in value (`git config --get-regexp remote.*`, `git remote -v`, `manage-bde -status`) phải redact ngay trong pipeline. Redact theo **tiền tố nhà cung cấp** (`ck_live_`, `sk_live_`, `ghp_`, `glpat-`, `AIza`, `AKIA`), không chỉ theo `token=`/`key=`: bộ lọc chỉ che `token=`/`key=` đã để lọt một key có tiền tố nhà cung cấp vào output của subagent. Key đã lọt vào transcript thì coi là đã lộ và phải rotate.
 3. **Không kết luận "không có/không mở" từ một phép đo hẹp.** Mỗi phép tìm phải kèm **positive control** (một thứ chắc chắn tồn tại mà phép đo phải tìm ra). Control = 0 kết quả ⇒ kênh đo hỏng, không phải hệ thống sạch.
 4. **Phân biệt 3 trạng thái**: *đã kiểm và sạch* / *đã kiểm và có vấn đề* / **chưa kiểm được**. Trạng thái thứ ba ghi rõ lý do (thiếu quyền, không có kênh đo), không gộp vào "sạch".
 5. **Verify bằng trạng thái, không bằng exit code.** `exit 0` không chứng minh gì; phải query lại state (registry, service, port, ACL, encryption status).
@@ -74,7 +74,7 @@ Get-SmbShare / Get-SmbSession / Get-SmbOpenFile / Get-SmbMapping / Get-Printer
 Get-LocalUser / Get-LocalGroupMember / Get-LocalGroup
 icacls <path> ; Get-Acl <path>
 Get-ScheduledTask ; Get-CimInstance Win32_Service ; Get-Service
-ssh-keygen -y -P "" -f <key>
+Select-String -Quiet ENCRYPTED <key>   # chỉ đúng với PEM cũ; KHÔNG dùng ssh-keygen -y -P "" từ PowerShell 5.1 (xem Phase 2)
 git config --show-origin --get-all credential.helper ; git remote -v ; git log -S
 tailscale status ; tailscale debug netmap
 reg query <key> /s
@@ -100,7 +100,7 @@ Giao theo thứ tự blast radius **A → B → C → D**, nhưng chạy song so
 **Hợp đồng bắt buộc trong prompt của mỗi subagent** (7 điều, copy nguyên văn — thiếu 1 điều là không nhận kết quả):
 
 1. **READ-ONLY**: không sửa/xoá/tạo file, không đổi registry/ACL, không start/stop service.
-2. **Không in secret**: chỉ đường dẫn, tên key, số lượng, độ dài, boolean. Không in nội dung key/token/PSK/env value.
+2. **Không in secret**: chỉ đường dẫn, tên key, số lượng, độ dài, boolean. Không in nội dung key/token/PSK/env value. Redact theo tiền tố nhà cung cấp (`ck_live_`, `sk_live_`, `ghp_`, `glpat-`, `AIza`, `AKIA`) chứ không chỉ `token=`/`key=`.
 3. **Positive control** cho mỗi phép tìm; control = 0 ⇒ ghi "kênh đo hỏng", không ghi "không có".
 4. **3 trạng thái**: finding / đã kiểm sạch / chưa kiểm được (kèm lý do).
 5. `Access denied` ⇒ "chưa kiểm (cần elevated)", **không** kết luận "không có".
@@ -114,6 +114,8 @@ Giao theo thứ tự blast radius **A → B → C → D**, nhưng chạy song so
 - Giữ **coverage ledger**: mỗi mục thuộc đúng 1 trong 3 trạng thái; mục "chưa kiểm" phải nêu lý do và bước chạy tiếp.
 - Nếu một agent trả về mỏng, không có positive control, hoặc ghi "sạch" mà không kèm lệnh ⇒ **chạy lại slice đó** với phạm vi hẹp hơn. Không chấp nhận "sạch" thiếu bằng chứng.
 - Ghi vào report slice nào đã chạy, slice nào chưa, và môi trường có subagent hay không.
+- Hai slice kết luận **mâu thuẫn** (ví dụ slice A ghi "Credential Guard không chạy", slice D xếp cùng mục vào "sạch") ⇒ parent **đo lại** bằng state, không chép một phía.
+- Job nền báo `failed` (hoặc output có dòng rỗng/thiếu) ⇒ đọc lại output và chạy lại phần lỗi trước khi ghi "đã kiểm". Ví dụ đã gặp: quét repo có dòng `Repo: ` với path rỗng và job báo `failed`.
 
 **Cấm**: hai agent cùng sửa một file; agent tự apply fix (mọi mutation vẫn qua Phase 8 + quyết định của user); agent chạy phase ngoài slice của mình (trùng lặp ⇒ tốn và lệch số liệu).
 
@@ -135,6 +137,8 @@ Giao theo thứ tự blast radius **A → B → C → D**, nhưng chạy song so
 
 Không kết luận "đã vá đầy đủ" từ danh sách KB/`Get-HotFix` (bỏ sót cumulative/SSU) — dùng update searcher / `softwareupdate` / package manager.
 
+**AV/EDR: đo chế độ chạy, không chỉ cờ bật/tắt.** Khi máy có AV bên thứ ba (đăng ký trong `AntiVirusProduct`), Defender có thể ở `SxS Passive Mode`: `RealTimeProtectionEnabled=False` lúc đó là hành vi thiết kế, không phải "bị tắt". Bắt buộc đo `(Get-MpComputerStatus).AMRunningMode` và trạng thái dịch vụ AV chính trước khi xếp mức hay đề xuất `Set-MpPreference -DisableRealtimeMonitoring $false` (bật hai AV real-time cùng lúc gây xung đột).
+
 ### Patch gap của ứng dụng & browser (đừng bỏ)
 
 OS patch ≠ ứng dụng patch. Máy có thể vá OS đầy đủ nhưng browser/remote-access host lệch nhiều major version.
@@ -143,7 +147,7 @@ OS patch ≠ ứng dụng patch. Máy có thể vá OS đầy đủ nhưng brows
 |---|---|---|---|
 | Gói có bản mới | `winget upgrade --include-unknown` | `brew outdated --greedy` | `apt list --upgradable` / `dnf check-update` / `flatpak remote-ls --updates` |
 | Version browser đang cài | `(Get-Item "$env:ProgramFiles\Google\Chrome\Application\chrome.exe").VersionInfo.ProductVersion`; registry Uninstall keys | `defaults read "/Applications/Google Chrome.app/Contents/Info" CFBundleShortVersionString`; `mdls -name kMDItemVersion` | `google-chrome --version`; `chromium --version`; `firefox --version` |
-| Bản mới nhất | Chrome: `https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1` (đã verify: `platform=Windows`/`Mac`/`Linux`; `Win` trả rỗng); Edge: `winget show Microsoft.Edge` | Chrome: `platform=Mac`; Safari theo OS | Chrome: `platform=Linux`; `apt-cache policy <pkg>` |
+| Bản mới nhất | Chrome: `https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1` (đã verify: `platform=Windows`/`Mac`/`Linux`; `Win` trả rỗng); Edge: `https://edgeupdates.microsoft.com/api/products` (Stable, Windows, x64; **không** dùng `winget show Microsoft.Edge`, đã đo trả bản thấp hơn bản đang cài) | Chrome: `platform=Mac`; Safari theo OS | Chrome: `platform=Linux`; `apt-cache policy <pkg>` |
 | Remote-access host | `winget list "*Remote Desktop*"`, `Get-Service chromoting`, RustDesk/AnyDesk | `ls /Applications | grep -iE 'anydesk|rustdesk|teamviewer'` | `systemctl status anydesk rustdesk --no-pager` |
 
 Cách đọc: so **installed vs latest stable**. Patch release của browser (ví dụ `X.Y.Z.41` → `X.Y.Z.47`, cùng major) gần như luôn chứa bản vá bảo mật ⇒ lệch ≥1 patch = cần update. Remote-access host lệch **major** version trong khi service đang chạy là finding mức High nếu ổ chưa mã hoá.
@@ -203,6 +207,10 @@ Rate limit NVD: **5 request / 30 giây** khi không có API key (50 nếu có) �
 - **Nguồn thứ cấp** (xem nguyên tắc 10): CVE nêu trong tin tức mà chưa tra được NVD/GHSA/OSV ⇒ ghi `chưa đối chiếu`, kèm alias nếu có (OSV có thể resolve qua alias GHSA/PYSEC trước khi NVD cập nhật). Chỉ nâng thành `affected` khi version đang cài thoả dải ảnh hưởng.
 - **Vá đã cài ≠ vá đã có hiệu lực.** Kernel/libc/OpenSSL cần reboot hoặc restart service. Kiểm: Debian/Ubuntu `/var/run/reboot-required`; RHEL `needs-restarting -r`; so `uname -r` với kernel mới nhất đã cài (`rpm -q kernel --last` / `dpkg -l 'linux-image*'`); Windows `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired`. Còn pending reboot ⇒ finding "chưa có hiệu lực", không ghi "đã vá".
 - **Fix chưa có ở kênh stable** (distro mới có bản vá trong `-proposed`/chưa phát hành): ghi `fix.state = not-fixed-in-stable`, nêu biện pháp giảm thiểu (chặn port, tắt tính năng), không ghi "đã vá".
+- **`cpeName` trả CVE mà sản phẩm chỉ là nền tảng.** Đã đo: `cpeName=…google:chrome:120.0.6099.109` trả CVE đầu tiên là Yahoo Toolbar, trong đó Chrome nằm ở node `"vulnerable": false`. Khi đọc `cpeMatch[]` chỉ tính node `"vulnerable": true` của chính sản phẩm đang cài.
+- **Lọc MSRC theo title không chứng minh gì.** Đã đo: trang đầu 500 mục, lọc `Edge|Chromium` và `Windows 11` ra 0, trong khi control trả toàn CVE Firefox. Title MSRC thường không chứa tên sản phẩm. Muốn kết luận phải dùng CVRF/product tree theo UBR của Windows. Không có nguồn đối chiếu thì ghi "chưa đối chiếu", không ghi "0 CVE".
+- **Bản mới nhất của Edge:** dùng `https://edgeupdates.microsoft.com/api/products` (Stable, Windows, x64). Đã đo: `winget show Microsoft.Edge` trả 156.0.4314.58, thấp hơn bản đang cài 157.0.4341.46, nên không dùng winget làm nguồn "latest" cho Edge (API trả 157.0.4341.60).
+- **Tag upstream:** glob hẹp (`refs/tags/v24.14*`, `v2.5*`) chỉ cho biết bản cuối của nhánh đó, không chứng minh là bản mới nhất. Liệt kê rộng, sắp xếp theo version (`sort -V`), và kèm control là tag đang cài phải có trong danh sách.
 
 ### Mô hình Grype áp cho máy trạm (5 bước)
 
@@ -264,7 +272,7 @@ Gate mặc định: flag khi `fix.state=fixed` **và** (`KEV` hoặc `EPSS ≥ 0
 
 Bắt buộc kiểm thêm:
 
-- **Passphrase private key**: `for k in ~/.ssh/*; do ssh-keygen -y -P "" -f "$k" >/dev/null 2>&1 && echo "NO_PASSPHRASE $k" || echo "ok $k"; done` (chỉ in trạng thái).
+- **Passphrase private key** (3 trạng thái, không có nhánh mặc định "ok"): chạy trong **bash**, không chạy từ PowerShell 5.1. `for k in ~/.ssh/* ~/.ssh/vault/*; do head -1 "$k" 2>/dev/null | grep -q 'PRIVATE KEY' || continue; if grep -q ENCRYPTED "$k"; then echo "HAS_PASSPHRASE(PEM) $k"; elif ssh-keygen -y -P "" -f "$k" >/dev/null 2>&1; then echo "NO_PASSPHRASE $k"; else echo "UNKNOWN $k"; fi; done` (chỉ in trạng thái). Đã đo với 4 key tạm: `ENCRYPTED` chỉ xuất hiện ở PEM có passphrase (key OpenSSH mã hóa ra 0 lần khớp), `ssh-keygen -y -P ""` trong bash thoát 0 với key không passphrase và 255 với key có passphrase (cả PEM lẫn OpenSSH), còn từ PowerShell 5.1 cùng lệnh thoát 1 **cả với key không passphrase**, nên probe từ PowerShell cho kết quả sai. Lỗi probe ⇒ `UNKNOWN`, không đọc là "có passphrase" hay "sạch". CONTROL: tạo 1 key có và 1 key không passphrase ở thư mục tạm, chạy vòng lặp phải ra đúng `HAS_PASSPHRASE`/`NO_PASSPHRASE` hoặc `UNKNOWN` (OpenSSH mã hóa), rồi xoá.
 - **Credential nhúng trong URL**: xem Phase 6 (đừng dùng lệnh in value).
 - **`.gitmodules` là file tracked**: `git ls-files --error-unmatch .gitmodules` rồi `git show HEAD:.gitmodules` — nếu có credential thì đã vào lịch sử.
 - **Secret của process đang chạy**: browser automation (`DevToolsActivePort`), agent DB (SQLite `auth_credentials`), credential store riêng của tool.
@@ -388,6 +396,10 @@ Làm ngược thứ tự (sửa file → quên revoke) là lỗi phổ biến nh
 3. Thao tác không hoàn tác được (force-push, xoá dữ liệu, disable service đang dùng) → **hỏi trước**, nêu ảnh hưởng tới người/máy khác.
 4. Việc sinh secret (BitLocker recovery password): tạo **trước** khi mã hoá, ghi file ACL chặt, escrow nếu môi trường cho phép, **assert định dạng** trước khi xoá key cũ.
 5. Dọn dẹp: xoá script/log tạm. Nếu log từng chứa secret → coi như đã lộ, rotate lại.
+6. **Fix không hoàn tác được** (xoá tài khoản/nhóm local, xoá CA khỏi store, xoá credential/`cmdkey`, gỡ ứng dụng, xoá shadow copy, dọn Recycle Bin): trước khi chạy phải đo ai/cái gì đang dùng nó, ghi hash/kích thước/thumbprint vào report làm bằng chứng rollback, và hỏi lại user nếu phạm vi lớn hơn câu hỏi triage đã nêu. Chỉ xoá đúng đường dẫn nêu trong phương án user chọn. Không đề xuất xoá tài khoản/credential khi chưa có cơ sở xác định chúng còn dùng hay không.
+7. **Đọc quyết định kiến trúc có sẵn của repo trước khi đề xuất đổi** (ADR, `AGENTS.md`). Ví dụ: nếu một ADR đã loại backend từ xa cho Terraform và chọn giữ state local, thì đừng đề xuất lại phương án đó; secret là thuộc tính resource nên nằm trong state theo thiết kế và không "tách" ra được.
+8. **Ghi trạng thái "một phần" / "chờ elevated"** khi user chọn "Fix triệt để" nhưng chỉ làm được một vế. Không để hàng trạng thái đọc như đã xong.
+9. **Backup chỉ lưu ACL và metadata, không lưu nội dung secret.** Copy file chứa key sang chỗ khác nhân bản secret thành hai bản plaintext. Rollback của secret là cấp secret mới (hoặc lấy từ vault đã verify).
 
 ### Đo lại sau khi áp dụng (bắt buộc)
 
@@ -413,6 +425,11 @@ Mỗi thay đổi phải được đo lại **bằng đúng phép đo đã dùng
 | BitLocker | recovery password **trước** → TPM → escrow | `manage-bde -status` → `Protection On` + `Fully Encrypted` | `Disable-BitLocker` |
 | FileVault | `fdesetup enable` (lưu recovery key) | `fdesetup status` | `fdesetup disable` |
 | LUKS | kiểm `cryptsetup status <dev>` trước khi cài | `lsblk -f` | n/a |
+| ACL: lưu và hoàn tác | `icacls <path> /save <file>` với **tên file backup theo hash của đường dẫn đầy đủ** (hai file cùng tên cơ sở nằm ở thư mục khác nhau đã ghi đè lẫn nhau, chỉ còn một file backup) | `icacls <path>` | **Không** dựa vào `icacls /restore`: đã đo thất bại khi không elevated (`Not all privileges or groups referenced are assigned to the caller`, 0 file processed). Ghi rollback bằng lệnh `/grant`/`/remove`/`/inheritance:e` tường minh |
+| Siết ACL file | **Đo ACL gốc trước.** Đã gặp: file state IaC có ACL gốc chỉ một principal với quyền đọc `(R)`; áp template Modify cho owner cộng Full cho SYSTEM là nới quyền, phải khôi phục. ACL gốc đã chặt hơn đề xuất thì giữ nguyên | `icacls <path>` ra đúng tập principal mong muốn; control: user vẫn đọc được file | `/grant:r` về quyền gốc rồi `/remove:g` principal đã thêm |
+| Gỡ quyền thừa kế trên thư mục | Thứ tự đã dùng và verify được: `/save` → `/inheritance:d` → `/grant` owner tường minh → `/remove:g` | `icacls` không còn principal đã gỡ; control: chương trình của owner vẫn chạy (ví dụ gọi lại compiler trong thư mục đó) | `/grant` lại ACE đã gỡ |
+| Security log giữ log | `wevtutil sl Security /rt:true /ab:true /ms:<bytes>` (đã chạy thành công khi đặt cùng nhau) | `wevtutil gl Security` ra `retention: true`, `autoBackup: true`, `maxSize` mới | `wevtutil sl Security /rt:false /ab:false /ms:<bytes cũ>`; cảnh báo file `.evtx` backup tăng dần trong `winevt\Logs` |
+| Dọn Recycle Bin | Liệt kê mục trước (tên, kích thước). `Clear-RecycleBin` đã lỗi `The system cannot find the path specified` khi một ổ không có thùng rác; fallback xoá từng mục qua `Shell.Application` (`Namespace(10).Items()` → `InvokeVerb("delete")`) | Đếm lại = 0 | Không có |
 
 
 ### Hướng dẫn Hardening chủ động (Proactive Baseline Hardening) — Tùy biến theo từng OS
@@ -471,13 +488,15 @@ Cấu trúc báo cáo bắt buộc:
 2. **Kết luận**: bảng xếp theo blast radius (P0→P3), cột *Tác động quan sát được* — không dùng "có thể" khi đã đo được.
 3. **Báo cáo Lỗ hổng & CVE (OS, Browser, Remote-Access & High-Risk Apps)**: Bảng định danh CVE chi tiết cho các phần mềm rủi ro cao (Chrome, Edge, CRD Host, Git, 7-Zip, OS cumulative patch...), chỉ số CVSS, EPSS (xác suất khai thác), CISA KEV (cờ đang bị tấn công), và phân loại fix.state / unpatched.
 4. **Chi tiết từng finding posture & attacker-first**: Evidence (lệnh + output) → Đánh giá → Fix → Verify → Rollback.
-5. **Trạng thái khắc phục**: đã áp dụng (kèm verify) / đã thử và rollback (kèm lý do) / còn chờ (kèm điều kiện).
+5. **Trạng thái khắc phục**: bảng theo từng finding với các cột *quyết định user / hành động đã thực thi / state đo lại / rollback*, và nhãn rõ **đã xong / một phần / chờ elevated / không thực thi (kèm lý do)**. Ghi mục nào đo lại độc lập và mục nào chỉ dựa vào log của script. Rollback ghi bằng lệnh chạy được với quyền hiện có.
 6. **Kết luận đã bị bác bỏ**: giữ lại để người sau không lặp lại.
 7. **Giới hạn coverage**: Liệt kê chi tiết các mục chưa kiểm được và lý do (chủ yếu do thiếu quyền Administrator / UAC).
 8. **Lượt elevated (Bắt buộc, chạy TRƯỚC khi ghi report — bước 3 của *Thứ tự thực thi*)**:
    - Main Agent rà toàn bộ mục bị chặn bởi `Access denied` trong bước thu thập (như `vssadmin list shadows`, `auditpol`, `secedit`, `Get-AppLockerPolicy`, quyền private key CA, kiểm tra sâu BitLocker/TPM).
    - **Bắt buộc chủ động hỏi user để xin phép chạy 1 đợt script elevated duy nhất qua UAC / sudo**, đưa kết quả đo thực tế vào report.
    - Mục nào vẫn không chạy được (user từ chối UAC, không có sudo) → giữ ở *Giới hạn coverage* kèm lý do.
+   - **Script elevated**: đầu script kiểm `IsInRole(Administrator)` và dừng nếu sai; mỗi lệnh native lưu raw output kèm `$LASTEXITCODE` và số dòng **trước khi** lọc (lọc `Select-String` trên output lỗi cho ra "rỗng" giả); có control cho từng nguồn (ví dụ `auditpol` phải có dòng `Logon`, `vssadmin list providers` trước `list shadows`); xoá script ngay sau khi chạy và `Test-Path` = False. `Start-Process -Verb RunAs` trả lỗi `The operation was canceled by the user` khi user bấm No: ghi vào coverage, không coi là chạy.
+   - Sau khi áp dụng thay đổi trong lượt elevated, **đo lại từ phiên không elevated** những gì đọc được ở đó; mục nào chỉ script đo được thì ghi rõ "chỉ log script".
 9. **Hướng dẫn tiếp theo (Interactive Remediation Triage)**: Bắt buộc đính kèm đoạn prompt mẫu ở cuối report để người dùng copy dán cho Agent thực hiện phiên hỏi - đáp lựa chọn phương án (Accept / Fix) cho từng finding — theo đúng 2 nhánh ở Phase 8 (Ask Question tool nếu harness có, menu đánh số nếu không).
 Prompt mẫu bắt buộc phải có ở cuối report:
 ```markdown
@@ -515,6 +534,11 @@ Trước khi bàn giao: grep report cho `sk-`, `ghp_`, `ya29.`, `-----BEGIN`, `\
 | Credential trong file tracked | Chỉ sửa working tree | `git show HEAD:<file>` + `log -S` + `branch -r --contains` |
 | MSYS path (`/c/...`) khi gọi `git.exe` | Git báo "No such file" | Dùng đường dẫn Windows trong PowerShell, hoặc `Push-Location` |
 | `git config --get-regexp remote.*.url` | Token bị in nguyên văn | Loại `remote.*` khỏi regex; `git remote -v \| sed` redact |
+| `$env:PATH` của process ≠ cấu hình PATH | Dir `C:\Users\<u>\bin` đứng trước `System32` trong `$env:PATH`; đã đo registry: Machine PATH (REG_EXPAND_SZ) bắt đầu bằng `%SystemRoot%\system32` | Đọc PATH từ registry (Machine rồi User, `DoNotExpandEnvironmentNames`), ghi kiểu giá trị; chỉ khi dir user-writable đứng trước System32 trong thứ tự Machine+User mới là finding |
+| Cấu hình ≠ state đang chạy (Credential Guard) | Registry `Enabled=1` và `SecurityServicesRunning=2` bị đọc là "Credential Guard bật" | `Win32_DeviceGuard.SecurityServicesRunning`: phần tử `1` = Credential Guard, `2` = HVCI. Đã đo: Configured `1,2`, Running `2` (chỉ HVCI chạy) |
+| Xoá/đổi ACL file không xoá bản cũ trong shadow copy | Sau khi xoá key và file backup, shadow copy vẫn chứa chúng | Xem Phase 12 (shadow copy); xoá shadow copy không hoàn tác nên hỏi user |
+| Probe passphrase gộp hai trạng thái | Nhãn `HAS_PASSPHRASE_OR_INVALID` không phân biệt "có passphrase" và "probe hỏng" | Đọc dòng đầu file (`BEGIN … PRIVATE KEY` có/không `ENCRYPTED`) bằng `Select-String -Quiet 'ENCRYPTED'`; chạy probe trên key đã biết trước để làm control |
+| So sánh key trong vault | So nội dung secret với file khi khác dòng mới | Chuẩn hoá CRLF/LF và trim trước khi so (đã so bằng cách này: MATCH cả 3 key), kèm fingerprint `ssh-keygen -lf` |
 
 ## Không được làm
 
@@ -539,7 +563,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 | Lấy credential đã lưu | Credential Manager + DPAPI blob | `cmdkey /list`; `%APPDATA%\Microsoft\Credentials`, `%LOCALAPPDATA%\Microsoft\Credentials` | Keychain: `security dump-keychain \| grep -c svce` | `secret-tool search --all x y`; `~/.local/share/keyrings` |
 | Đọc secret user từng gõ | Shell history | `(Get-PSReadLineOption).HistorySavePath` → grep pattern token | `~/.zsh_history`, `~/.bash_history` | same |
 | Lấy mật khẩu cleartext lúc boot | Auto-logon | `Winlogon` → `AutoAdminLogon=1`, `DefaultPassword` (**cleartext**) | login items + FileVault auto-login | `getty` autologin, `~/.config/autostart` |
-| Dump credential từ memory | LSA protection / Credential Guard / WDigest | `RunAsPPL`, `LsaCfgFlags`, `UseLogonCredential` | SIP (`csrutil status`) | `kernel.yama.ptrace_scope`, `lockdown` |
+| Dump credential từ memory | LSA protection / Credential Guard / WDigest | `RunAsPPL`, `LsaCfgFlags`, `UseLogonCredential` là **cấu hình**; state chạy: `(Get-CimInstance -Namespace root\Microsoft\Windows\DeviceGuard -ClassName Win32_DeviceGuard).SecurityServicesRunning` có phần tử `1` (Credential Guard) hay chỉ `2` (HVCI) | SIP (`csrutil status`) | `kernel.yama.ptrace_scope`, `lockdown` |
 | Dùng lại hash/cache | Cached logons + policy | `CachedLogonsCount`, `net accounts` | `pwpolicy` | `pam_unix`/`faillock`, `/etc/security/pwquality.conf` |
 | Vé Kerberos còn sống | Ticket cache — **chỉ đếm**, không in nội dung vé | `klist \| Select-String "Ticket"` (hoặc `klist \| find /c "Ticket"`) | n/a | `klist` (chỉ đếm dòng) |
 
@@ -547,7 +571,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 
 | Kẻ tấn công dùng để | Kiểm | Lệnh gợi ý |
 |---|---|---|
-| PATH hijack: thả binary vào dir đứng trước | Thư mục trong `PATH` mà user ghi được | `$env:PATH -split ';'` → `icacls <dir>`; macOS/Linux: `echo $PATH \| tr ':' '\n'` → `ls -ld` |
+| PATH hijack: thả binary vào dir đứng trước | Thư mục trong `PATH` mà user ghi được | Windows: đọc PATH **từ registry** (`HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment` rồi `HKCU\Environment`, `DoNotExpandEnvironmentNames`, ghi kiểu giá trị), expand biến rồi `icacls <dir>`; `$env:PATH` của process shell/harness có thể bị chèn thêm dir và cho finding giả. macOS/Linux: `echo $PATH \| tr ':' '\n'` → `ls -ld` |
 | Chạy binary thay cho service | Service path **không** quote + thư mục ghi được | `Get-CimInstance Win32_Service \| ? { $_.PathName -notmatch '^"' }` → kiểm `icacls` từng path |
 | Sửa service config | Service DACL cho user thường `SERVICE_CHANGE_CONFIG` | `sc sdshow <svc>`; `Get-Acl` trên binary |
 | Leo thang bằng token | `SeImpersonate`/`SeDebug`/`SeTakeOwnership` bật cho user thường | `whoami /priv`; Linux `capsh --print`; macOS `sudo -l` |
@@ -566,7 +590,7 @@ Nguyên tắc chung: mỗi mục trả lời "kẻ tấn công được gì nế
 | Đọc secret từ dump/log | `%LOCALAPPDATA%\CrashDumps`, WER, `*.dmp`, `*.log` chứa `Bearer`/`token=` |
 | Đọc bản nháp editor | `*.swp`, `*~`, VS Code `Backups/`, JetBrains `LocalHistory`, Notepad++ backup |
 | Đọc output notebook/API tool | `*.ipynb` (outputs), Postman collection + environment, Insomnia export, `*.har` |
-| Khôi phục dữ liệu "đã xoá" | Recycle Bin `C:\$Recycle.Bin`; `vssadmin list shadows`; git dangling `git fsck --lost-found`, `git stash list` |
+| Khôi phục dữ liệu "đã xoá" | Recycle Bin `C:\$Recycle.Bin`; git dangling `git fsck --lost-found`, `git stash list`; **shadow copy**: `vssadmin list shadows` cần admin, nhưng bản đã tạo đọc được từ phiên **không** elevated qua `Get-ChildItem -LiteralPath '\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopyN\Users\<u>'` (đã đo). Chỉ liệt kê tên/kích thước, không đọc nội dung. File secret đã xoá hoặc đổi ACL vẫn còn bản cũ trong đó; đo lại sau khi xoá |
 | Lấy secret qua cloud sync | Thư mục đang sync (OneDrive/Drive/Dropbox) có chứa repo/secret: `Get-ChildItem env: \| ? Name -match 'OneDrive\|Drive'`; macOS `~/Library/CloudStorage`; Linux `~/OneDrive`, `rclone config` |
 | Đọc memory còn trên đĩa | `pagefile.sys`, `hiberfil.sys` — chỉ nguy hiểm khi ổ chưa mã hoá |
 
